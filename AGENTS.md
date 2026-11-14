@@ -6,6 +6,11 @@ Build a privacy-first fall detection prototype on a laptop or desktop using a we
 
 Raspberry Pi deployment and testing are outside the current scope. Pi compatibility and performance remain unverified.
 
+Implementation steps and progress are tracked in [IMPLEMENTATION.md](IMPLEMENTATION.md).
+Setup, simulation commands, and the implemented shared contract are documented in [README.md](README.md).
+
+For two-person development, follow the file ownership and shared interface in that plan. One person owns detection; the other owns application integration, safety, and controls. Coordinate changes to shared files before editing them.
+
 ## Technology Stack
 
 - **Language:** Python, with three modules in one application.
