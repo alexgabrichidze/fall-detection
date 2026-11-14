@@ -4,7 +4,9 @@ Follow [AGENTS.md](AGENTS.md) for architecture, requirements, and scope. Target 
 
 Model compatibility is the first checkpoint. Optional voice cancellation comes after the core flow works.
 
-The shared scaffold now lives in `src/fall_detection/`, with contract version 1 in `contracts.py`. The fake detector and console consumer run without optional camera/AI/audio dependencies. See [README.md](README.md) for setup and smoke commands. Live detection, countdowns, audio, notifications, and the OpenCV interface remain unimplemented. Both developers should review the contract before splitting.
+The shared scaffold lives in `src/fall_detection/`, with contract version 1 in `contracts.py`. B's safety controller, OpenCV controls, audio worker, notification worker, and Telegram transport are implemented. The detector contract and A-owned files are unchanged. Fake mode tests the application without a camera, model, or real notification destination. Live CLI integration remains disabled pending A's verified detector. See [README.md](README.md) for commands, verification evidence, and remaining external checks.
+
+B verification: standard-library tests and optional rendering/decoding tests pass; the actual OpenCV window completes a simulated countdown and simulated accepted delivery. Simulated camera failure and failed notification delivery remain visible while countdown handling continues. A prerecorded prompt, speaker playback, a Telegram bot/test chat, real delivery, and A's live detector remain pending. UI/audio versions are pinned separately in `requirements-device.txt`; inference-stack versions remain unverified. Checked boxes below describe implemented behavior verified through tests or simulation, not complete real-device validation.
 
 ## Two-person work split
 
@@ -53,7 +55,7 @@ The initial interface is implemented in `contracts.py`; both developers still ne
 - [x] Create directories for model assets, recorded prompts, and tests.
 - [x] Exclude credentials, temporary files, virtual environments, and local evaluation videos from Git.
 
-The core has no runtime dependencies and passes its checks with Python 3.14. Optional dependency groups are declared in `pyproject.toml`, but installing, importing, and pinning the actual detection/audio stack remain unchecked. Neither developer should assume those packages work together until verified.
+The console simulation has no runtime dependencies and passes its checks with Python 3.14. UI/audio packages import successfully and are pinned separately in `requirements-device.txt`. The complete detection stack remains unchecked. Coordinate package versions before combining A's environment with B's; successful UI/audio imports do not establish inference compatibility or speaker playback.
 
 ## 2. Check the pretrained model (A)
 
@@ -117,39 +119,39 @@ Reference: [MediaPipe Pose Landmarker](https://developers.google.com/edge/mediap
 
 ## 8. Build the countdown logic (B)
 
-- [ ] Implement monitoring, suspected fall, awaiting response, and alerting states.
-- [ ] Assign an identifier to each incident.
-- [ ] Start one countdown when a suspected fall becomes an incident.
-- [ ] Use a monotonic clock so system-clock changes cannot alter the countdown.
-- [ ] Allow explicit cancellation.
-- [ ] Prevent repeated detections from restarting the countdown or creating duplicate incidents.
-- [ ] Keep an active incident pending if the camera fails or monitoring pauses; do not silently cancel it.
-- [ ] Define an explicit incident reset and rearming behavior so the same event does not immediately trigger again.
-- [ ] Test transitions with a controllable test clock, including cancellation immediately before expiry.
+- [x] Implement monitoring, suspected fall, awaiting response, and alerting states.
+- [x] Assign an identifier to each incident.
+- [x] Start one countdown when a suspected fall becomes an incident.
+- [x] Use a monotonic clock so system-clock changes cannot alter the countdown.
+- [x] Allow explicit cancellation.
+- [x] Prevent repeated detections from restarting the countdown or creating duplicate incidents.
+- [x] Keep an active incident pending if the camera fails or monitoring pauses; do not silently cancel it.
+- [x] Define an explicit incident reset and rearming behavior so the same event does not immediately trigger again.
+- [x] Test transitions with a controllable test clock, including cancellation immediately before expiry.
 
 ## 9. Add the prompt and local controls (B)
 
 - [ ] Add a recorded "Are you okay?" prompt.
 - [ ] Play it once when the countdown starts.
-- [ ] Keep audio playback from blocking controls or the countdown.
-- [ ] Display remaining countdown time.
-- [ ] Add an on-screen cancellation button and a keyboard shortcut.
-- [ ] Add monitoring pause/resume controls.
-- [ ] Display camera status, tracking status, and incident status separately.
-- [ ] Show an audio error if prompt playback fails while keeping cancellation and countdown handling available.
+- [x] Keep audio playback from blocking controls or the countdown.
+- [x] Display remaining countdown time.
+- [x] Add an on-screen cancellation button and a keyboard shortcut.
+- [x] Add monitoring pause/resume controls.
+- [x] Display camera status, tracking status, and incident status separately.
+- [x] Show an audio error if prompt playback fails while keeping cancellation and countdown handling available.
 
 ## 10. Add Telegram notifications (B)
 
 - [ ] Configure one bot and one caregiver destination.
-- [ ] Read credentials from environment variables and keep them out of source code and logs.
+- [x] Read credentials from environment variables and keep them out of source code and logs.
 - [ ] Send a clearly labelled test message to the configured test destination.
-- [ ] Implement text-only incident alerts containing only necessary metadata.
-- [ ] Send requests through a background worker with a timeout.
-- [ ] Return delivery results to the application.
-- [ ] Show failed or uncertain delivery clearly.
-- [ ] Send only one automatic alert attempt per incident initially.
-- [ ] Describe successful sending as Telegram accepting the message, not caregiver acknowledgement.
-- [ ] Use a fake notification sender in automated tests so tests never contact a real caregiver.
+- [x] Implement text-only incident alerts containing only necessary metadata.
+- [x] Send requests through a background worker with a timeout.
+- [x] Return delivery results to the application.
+- [x] Show failed or uncertain delivery clearly.
+- [x] Send only one automatic alert attempt per incident initially.
+- [x] Describe successful sending as Telegram accepting the message, not caregiver acknowledgement.
+- [x] Use a fake notification sender in automated tests so tests never contact a real caregiver.
 
 ## 11. Connect the complete application (B leads; A supports)
 
@@ -189,5 +191,5 @@ Reference: [MediaPipe Pose Landmarker](https://developers.google.com/edge/mediap
 - [ ] Document installation, model downloads, and credential setup.
 - [ ] Document camera selection, fixed configuration, and local controls.
 - [ ] List unresolved model limitations and the scope of completed testing.
-- [ ] Provide one command to start the application.
+- [x] Provide one command to start the application (fake mode; live mode remains gated).
 - [ ] Verify the instructions from a fresh environment on the development computer.

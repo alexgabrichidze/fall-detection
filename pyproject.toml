@@ -18,7 +18,8 @@ detection = [
     "mediapipe>=0.10.21,<2",
     "ai-edge-litert>=1.2,<3",
 ]
-audio = ["sounddevice>=0.5,<1"]
+ui = ["numpy>=1.26,<3", "opencv-python>=4.8,<5"]
+audio = ["numpy>=1.26,<3", "sounddevice>=0.5,<1"]
 voice = ["vosk>=0.3.45,<0.4", "sounddevice>=0.5,<1"]
 
 [project.scripts]

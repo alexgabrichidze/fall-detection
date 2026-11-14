@@ -20,3 +20,16 @@ class ScaffoldConfig:
         if not isfinite(self.poll_interval_seconds) or self.poll_interval_seconds <= 0:
             raise ValueError("poll interval must be finite and positive")
 
+
+
+@dataclass(frozen=True, slots=True)
+class ApplicationConfig:
+    countdown_seconds: float = 20.0
+    preview_timeout_seconds: float = 2.0
+    poll_interval_seconds: float = 0.01
+
+    def __post_init__(self):
+        for name in ("countdown_seconds", "preview_timeout_seconds", "poll_interval_seconds"):
+            value = getattr(self, name)
+            if not isfinite(value) or value <= 0:
+                raise ValueError(f"{name} must be finite and positive")
