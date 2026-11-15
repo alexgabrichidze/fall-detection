@@ -6,6 +6,7 @@ from math import isfinite
 from pathlib import Path
 import re
 from queue import Empty, Full, Queue
+from statistics import mean
 from threading import Event, Lock, Thread
 from time import monotonic
 
@@ -30,9 +31,10 @@ def is_cancellation(result: str) -> bool:
             return False
         if " ".join(word["word"] for word in words) != text:
             return False
-        return bool(words) and all(
-            isfinite(word["conf"]) and 0.8 <= word["conf"] <= 1 for word in words
-        )
+        confidence = [word["conf"] for word in words]
+        return (bool(confidence)
+                and all(isfinite(score) and 0.45 <= score <= 1 for score in confidence)
+                and mean(confidence) >= 0.65)
     except (ValueError, TypeError, KeyError, AttributeError):
         return False
 

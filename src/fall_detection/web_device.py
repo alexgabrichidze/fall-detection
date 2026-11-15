@@ -10,7 +10,7 @@ from threading import Lock, Thread
 from .device import Command, View, draw_pose
 from .camera_inputs import list_camera_inputs
 from .notifier import DeliveryStatus
-from .telegram_link import RelayTelegramLink, TelegramLink
+from .telegram_link import TelegramLink
 
 _STATIC = Path(__file__).with_name("static")
 _ASSETS = {
@@ -22,7 +22,7 @@ _ASSETS = {
 
 
 class WebDevice:
-    def __init__(self, port: int, *, live: bool, countdown: float, telegram: TelegramLink | RelayTelegramLink | None,
+    def __init__(self, port: int, *, live: bool, countdown: float, telegram: TelegramLink | None,
                  camera_index: Callable[[], int] | None = None,
                  select_camera: Callable[[int], None] | None = None):
         self.live = live
@@ -78,6 +78,7 @@ class WebDevice:
             "incident": view.state.value if view else "monitoring",
             "remaining": view.remaining if view else None,
             "delivery": view.delivery if view else "none",
+            "caregiver": view.caregiver if view else None,
             "audio": view.audio if view else "not requested",
             "voice": view.voice if view else "disabled",
             "listening": view.listening if view else False,

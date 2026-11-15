@@ -73,6 +73,7 @@ class View:
     running: bool = False
     voice: str = "disabled"
     listening: bool = False
+    caregiver: str | None = None
 
 
 def status_lines(view: View, *, telegram_enabled: bool = False) -> tuple[str, ...]:
@@ -88,12 +89,16 @@ def status_lines(view: View, *, telegram_enabled: bool = False) -> tuple[str, ..
     monitoring = "UNAVAILABLE" if fault != "none" else ("PAUSED" if view.paused else "enabled")
     if view.paused and fault != "none":
         monitoring += " (PAUSED)"
+    delivery = {
+        "help": "Caregiver: help is on the way",
+        "false_alarm": "Caregiver: false alarm",
+    }.get(view.caregiver, f"Delivery: {view.delivery}")
     return (
         source,
         f"Monitoring: {monitoring} | detector fault: {fault}",
         f"Camera: {preview.camera_status.value} | pose: {preview.pose_status.value} | model ready: {preview.model_ready}",
         f"Incident: {view.state.value}{countdown}",
-        f"Delivery: {view.delivery}",
+        delivery,
         f"Audio: {view.audio} | Mic: {'ACTIVE' if view.listening else 'off'} | Voice: {view.voice}",
         f"Model score: {score}",
         "C/Space: cancel | P: pause/resume | R: reset/rearm | Q/Esc: quit",
@@ -168,7 +173,7 @@ def draw_pose(image, preview: Preview, cv) -> None:
 
 
 class OpenCVDevice:
-    title = "Fall detection prototype"
+    title = "Safe&Sound"
 
     def __init__(self, *, telegram_enabled: bool = False):
         if sys.platform.startswith("linux") and not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
