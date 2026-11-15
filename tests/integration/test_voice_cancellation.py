@@ -118,7 +118,8 @@ class VoiceCancellationTests(unittest.TestCase):
         self.voice.poll.return_value = VoiceResult(self.incident.incident_id)
         self.voice.idle = True
         self.assertEqual(self.app.step().state, SafetyState.CANCELLED)
-        self.audio.play.assert_not_called()
+        self.audio.play.assert_called_once()
+        self.assertEqual(self.audio.play.call_args.args[1].name, 'alarm-cancelled.wav')
         self.notifier.submit.assert_not_called()
 
     def test_browser_exposes_microphone_status(self):
