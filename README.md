@@ -1,10 +1,10 @@
 # Fall Detection Prototype
 
-Monitor one person with a webcam. A possible fall starts a spoken check-in and a 20-second response window. The app says “Ten seconds left” at the halfway point. Cancel locally or let the countdown expire to attempt one caregiver alert. The app says “Caregiver notified” when Telegram accepts the message. Video and pose landmarks stay in memory on the device. Detection and cancellation work offline after setup.
+Monitor one person with a webcam. A possible fall starts a spoken check-in and a 20-second response window. The app says “Ten seconds left” at the halfway point. Cancel locally or let the countdown expire to send one caregiver alert with a short, silent clip when available. The app says “Caregiver notified” when Telegram accepts the message. Detection and cancellation work offline after setup.
 
 ## Run in your browser
 
-Use Python 3.12 in a desktop session. The full project ZIP includes the fall model. For a Git checkout, download it once using the command in [models/README.md](models/README.md).
+Use Python 3.12 in a desktop session. The full project ZIP includes the fall model and the optional offline English speech model. For a Git checkout, download the fall model using the command in [models/README.md](models/README.md).
 
 From the project directory, with a webcam positioned to show the person and floor, run
 
@@ -42,34 +42,37 @@ The voice prompts play locally through the speakers. Use `--prompt PATH` to repl
 
 ## Optional offline voice cancellation
 
-Vosk recognizes **“I'm okay”** or **“I am okay”** locally. Enable it explicitly:
+Vosk recognizes **“I'm okay”** or **“I am okay”** locally. Install the voice extra and launch with `--voice`.
 
 ```bash
 python -m pip install -e '.[voice]'
-curl -fL https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip -o /tmp/fall-voice-model.zip
-python -m zipfile -e /tmp/fall-voice-model.zip models
 fall-detection --detector live --web --voice
 ```
 
-The model is already installed in this development checkout. Using its existing environment, run:
+For a Git checkout, download the offline model before starting voice mode.
 
 ```bash
-venv/bin/fall-detection --detector live --web --voice
+curl -fL https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip -o /tmp/fall-voice-model.zip
+python -m zipfile -e /tmp/fall-voice-model.zip models
 ```
 
-The [small English model](https://alphacephei.com/vosk/models) is Apache-2.0 licensed. Its download SHA-256 is `30f26242c4eb449f948e42cb302dd7a686cb29a3423a8367f99ff41780942498`. Keep the extracted directory outside Git. `--voice-model PATH` selects another local model directory. No network access is needed after installation.
+The [small English model](https://alphacephei.com/vosk/models) is Apache-2.0 licensed. Its download SHA-256 is `30f26242c4eb449f948e42cb302dd7a686cb29a3423a8367f99ff41780942498`. Keep the extracted directory outside Git. `--voice-model PATH` selects another local model directory. No network access is needed after installation. On macOS, the voice extra installs Vosk 0.3.44 for Apple Silicon support.
 
-The microphone opens after successful prompt playback and a 0.4-second echo guard, only while a response is pending. Listening pauses for the spoken countdown reminder and resumes after playback and the echo guard. Wait for **Microphone active** before speaking, then pause briefly so recognition can finish. Recognition uses a focused response vocabulary that includes negative phrases and unknown speech. Only a complete matching phrase (or repetitions of it) with every word confidence at least 0.8 cancels the incident; partial results, silence, and other recognized phrases do not. This threshold does not guarantee correct recognition. Button and keyboard cancellation remain available.
+The microphone opens after successful prompt playback and a 0.4-second echo guard, only while a response is pending. Listening pauses for the spoken countdown reminder and resumes after playback and the echo guard. Wait for **Microphone active** before saying “I'm okay,” then pause briefly so recognition can finish. The focused vocabulary includes negative phrases and unknown speech. Cancellation requires a complete matching phrase or repetitions of it, with mean word confidence of at least 0.65 and each word at least 0.45. Button and keyboard cancellation remain available.
 
 The **Voice response** row shows readiness, model loading, microphone activity, and failures. Input audio and recognized text remain in memory and are discarded. Listening stops on cancellation, countdown expiry, or exit. A failed prompt leaves voice capture off. A missing model or microphone failure leaves the countdown running. Simulation mode never opens the microphone.
 
-Use the system microphone by default, or pass `--microphone N` with a sounddevice input index. List devices with `venv/bin/python -m sounddevice`. On macOS, allow microphone access for Terminal or the launching app in **Privacy & Security → Microphone**. The microphone belongs to the Python process, not the browser.
+Use the system microphone by default, or pass `--microphone N` with a sounddevice input index. List devices with `python -m sounddevice`. On macOS, allow microphone access for Terminal or the launching app in **Privacy & Security → Microphone**. The Python process opens the microphone.
 
 Automated checks cover response filtering, playback gating, microphone cleanup/failure, stale incident results, manual cancellation, and expiry. The installed Vosk model loads and rejects the bundled prompt as a cancellation. A live spoken “I am okay” response through the HyperX system-default microphone was accepted using the focused response vocabulary. The previous unrestricted recognizer rejected the same response at the word-confidence threshold. This is one observed successful response, not a recognition accuracy estimate.
 
 ## Send real Telegram alerts
 
 Click **Connect Telegram** → **Open Telegram**. Tap **Start** from the Telegram account that should receive alerts, then return to the monitor and click **Finish linking**. The link expires after 10 minutes. Use **Send test message** to verify delivery to that chat. The demo connects to @falldetectionsuperbot through a temporary relay on the host Mac. The Mac and tunnel need to stay online.
+
+While monitoring with a linked chat, the app keeps a rolling camera buffer in memory. An alert that goes out after the countdown includes up to 10 seconds before detection and 3 seconds after. The clip has no microphone audio. Cancelling during the countdown discards the clip without uploading it. If no clip is available, the app sends the alert as text.
+
+The caregiver can tap **Help is on the way** to play a spoken acknowledgment at the monitor or **False alarm** to announce the decision and rearm it automatically. Replies apply to the active alert. The shared relay accepts the first reply within 30 minutes.
 
 ### Set up the shared bot once
 
@@ -79,7 +82,7 @@ The owner runs the relay with the bot token on one computer. It reads `TELEGRAM_
 python -m fall_detection.telegram_relay
 ```
 
-The relay listens on `127.0.0.1:8767`. To point the browser monitor at another relay, set `FALL_MONITOR_RELAY_URL` to its public HTTPS address at launch. To share a preconfigured copy, put that address in `src/fall_detection/relay-url.txt` before sharing the source or building the package. Each installation pairs its own Telegram recipient. A temporary tunnel address lasts for the tunnel session.
+The relay listens on `127.0.0.1:8767`. Restart it after updating the code so it can forward clips and receive caregiver replies. To point the browser monitor at another relay, set `FALL_MONITOR_RELAY_URL` to its public HTTPS address at launch. To share a preconfigured copy, put that address in `src/fall_detection/relay-url.txt` before sharing the source or building the package. Each installation pairs its own Telegram recipient. A temporary tunnel address lasts for the tunnel session.
 
 ### Use your own bot
 
@@ -103,7 +106,7 @@ export TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID
 fall-detection --detector live --telegram
 ```
 
-Alerts contain a possible-fall message and an incident ID. The app makes one attempt per incident. `telegram_accepted_no_acknowledgement` means Telegram accepted the message. `failed` means delivery was rejected or could not be started. `uncertain` means the app could not establish whether Telegram received it. Use the window to rearm after a delivery result.
+Alerts contain a possible-fall message and an incident ID. A rejected video upload falls back to text. `telegram_accepted_no_acknowledgement` means Telegram accepted the message. `failed` means delivery was rejected or could not be started. `uncertain` means the app could not establish whether Telegram received it. Check the linked chat after an uncertain result. Use the window to rearm manually after a delivery result.
 
 ## Demo without a camera
 

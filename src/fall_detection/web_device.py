@@ -78,6 +78,7 @@ class WebDevice:
             "incident": view.state.value if view else "monitoring",
             "remaining": view.remaining if view else None,
             "delivery": view.delivery if view else "none",
+            "caregiver": view.caregiver if view else None,
             "audio": view.audio if view else "not requested",
             "voice": view.voice if view else "disabled",
             "listening": view.listening if view else False,

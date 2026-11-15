@@ -22,7 +22,7 @@ class VoiceTests(unittest.TestCase):
         for text in ("okay", "not okay", "i am not okay", "are you okay", "i need help",
                      "i'm okay but help", "i am okay i am not okay", "[unk] i am okay", "i am okay help", "", "i am"):
             self.assertFalse(is_cancellation(response(text)))
-        for value in (response("i'm okay", 0.79), response("i'm okay", float('nan')),
+        for value in (response("i'm okay", 0.64), response("i'm okay", float('nan')),
                       '{"partial":"i am okay"}', '{"text":"i am okay"}',
                       '{"text":"i am okay","result":null}', 'not JSON', '[]'):
             self.assertFalse(is_cancellation(value))

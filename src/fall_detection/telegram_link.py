@@ -12,7 +12,9 @@ from time import monotonic
 from urllib.parse import urlsplit
 
 from .contracts import DetectionSource
-from .notifier import DeliveryResult, DeliveryStatus, FakeSender, TelegramConfig, TelegramSender
+from .notifier import (
+    CaregiverAction, DeliveryResult, DeliveryStatus, FakeSender, TelegramConfig, TelegramSender, telegram_request,
+)
 from .safety import Incident
 
 
@@ -29,27 +31,6 @@ def read_settings(path: Path) -> dict:
     if not isinstance(settings, dict):
         raise ValueError("The local Telegram settings must be a JSON object.")
     return settings
-
-
-def telegram_request(token: str, method: str, body: dict):
-    connection = HTTPSConnection("api.telegram.org", timeout=7)
-    try:
-        connection.request("POST", f"/bot{token}/{method}", json.dumps(body).encode(),
-                           {"Content-Type": "application/json"})
-        response = connection.getresponse()
-        status = response.status
-        payload = json.loads(response.read(1024 * 1024))
-    except (HTTPException, OSError, ValueError):
-        raise ValueError("Could not reach Telegram. Check your connection and try again.") from None
-    finally:
-        connection.close()
-    if status in (401, 404):
-        raise ValueError("Telegram rejected the bot token. Check it in BotFather.")
-    if status == 409:
-        raise ValueError("Another service is receiving messages for this bot.")
-    if not isinstance(payload, dict) or payload.get("ok") is not True:
-        raise ValueError("Telegram could not complete the request. Try again shortly.")
-    return payload.get("result")
 
 
 class _LocalSettings:
@@ -74,6 +55,8 @@ class TelegramLink(_LocalSettings):
     def __init__(self, path: Path = OWNER_SETTINGS) -> None:
         super().__init__(path)
         self._pairing: tuple[str, float] | None = None
+        self._sender_config: TelegramConfig | None = None
+        self._sender: TelegramSender | None = None
 
     _request = staticmethod(telegram_request)
 
@@ -146,9 +129,20 @@ class TelegramLink(_LocalSettings):
             self._save(settings)
             self._pairing = None
 
-    def notify(self, incident: Incident):
-        config = self.config() if incident.source == DetectionSource.LIVE else None
-        return (TelegramSender(config) if config else FakeSender())(incident)
+    def _transport(self) -> TelegramSender | None:
+        config = self.config()
+        if config != self._sender_config:
+            self._sender_config = config
+            self._sender = TelegramSender(config, replies=True) if config else None
+        return self._sender
+
+    def notify(self, incident: Incident, clip: bytes | None = None) -> DeliveryResult:
+        sender = self._transport() if incident.source == DetectionSource.LIVE else None
+        return sender(incident, clip) if sender else FakeSender()(incident)
+
+    def poll_reply(self, incident_id: str) -> CaregiverAction | None:
+        sender = self._transport()
+        return sender.poll_reply(incident_id) if sender else None
 
     def send_test(self) -> DeliveryStatus:
         config = self.config()
@@ -211,11 +205,30 @@ class RelayTelegramLink(_LocalSettings):
             self._save({})
             self._ticket = None
 
-    def notify(self, incident: Incident) -> DeliveryResult:
+    def notify(self, incident: Incident, clip: bytes | None = None) -> DeliveryResult:
         if incident.source != DetectionSource.LIVE:
             return FakeSender()(incident)
-        status = self._send("fall", incident_id=incident.incident_id)
+        grant = self._grant()
+        if grant and clip:
+            try:
+                result = self._post("/notify", clip, headers={
+                    "Content-Type": "video/mp4", "Authorization": f"Bearer {grant}",
+                    "X-Incident-ID": incident.incident_id,
+                }, timeout=24)
+                if not result.get("legacy"):
+                    return DeliveryResult(incident.incident_id, DeliveryStatus(result.get("status")))
+            except ValueError:
+                return DeliveryResult(incident.incident_id, DeliveryStatus.UNCERTAIN)
+        status = self._send("fall", incident_id=incident.incident_id, replies=True)
         return DeliveryResult(incident.incident_id, status)
+
+    def poll_reply(self, incident_id: str) -> CaregiverAction | None:
+        grant = self._grant()
+        if not grant:
+            return None
+        result = self._post("/response", {"grant": grant, "incident_id": incident_id})
+        action = result.get("action")
+        return CaregiverAction(action) if action else None
 
     def send_test(self) -> DeliveryStatus:
         status = self._send("test")
@@ -223,9 +236,12 @@ class RelayTelegramLink(_LocalSettings):
             raise ValueError("Link a Telegram chat first.")
         return status
 
-    def _send(self, kind: str, **fields: str) -> DeliveryStatus:
+    def _grant(self) -> str | None:
         with self._lock:
-            grant = self._settings.get("grant")
+            return self._settings.get("grant")
+
+    def _send(self, kind: str, **fields: str | bool) -> DeliveryStatus:
+        grant = self._grant()
         if not grant:
             return DeliveryStatus.SIMULATED
         try:
@@ -234,13 +250,13 @@ class RelayTelegramLink(_LocalSettings):
         except ValueError:
             return DeliveryStatus.UNCERTAIN
 
-    def _post(self, path: str, body: dict) -> dict:
+    def _post(self, path: str, body: dict | bytes, *, headers: dict | None = None, timeout: int = 10) -> dict:
         endpoint = self._endpoint
         connection_type = HTTPSConnection if endpoint.scheme == "https" else HTTPConnection
-        connection = connection_type(endpoint.hostname, endpoint.port, timeout=10)
+        connection = connection_type(endpoint.hostname, endpoint.port, timeout=timeout)
+        data = body if isinstance(body, bytes) else json.dumps(body).encode()
         try:
-            connection.request("POST", endpoint.path + path, json.dumps(body).encode(),
-                               {"Content-Type": "application/json"})
+            connection.request("POST", endpoint.path + path, data, headers or {"Content-Type": "application/json"})
             response = connection.getresponse()
             status = response.status
             payload = json.loads(response.read(4096))
@@ -248,6 +264,9 @@ class RelayTelegramLink(_LocalSettings):
             raise ValueError("Could not reach the shared Telegram bot. Try again shortly.") from None
         finally:
             connection.close()
+        if (isinstance(body, bytes) and status == 400 and isinstance(payload, dict)
+                and payload.get("error") == "Invalid relay request."):
+            return {"legacy": True}
         if not isinstance(payload, dict) or status != 200:
             message = payload.get("error") if isinstance(payload, dict) else None
             raise ValueError(message or "The shared Telegram bot is unavailable. Try again shortly.")
