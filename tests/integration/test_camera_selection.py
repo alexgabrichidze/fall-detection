@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
+from fall_detection.audio import AudioResult
 from fall_detection.camera_inputs import list_camera_inputs
 from fall_detection.config import ApplicationConfig
 from fall_detection.contracts import CameraStatus, DetectionEvent, DetectionSource, EventKind, Preview
@@ -111,6 +112,9 @@ class CameraSelectionTests(unittest.TestCase):
             self.detector._events.append(DetectionEvent('fall', clock.now, DetectionSource.LIVE,
                                                         EventKind.POSSIBLE_FALL))
             app.step()
+            audio.poll.return_value = AudioResult(app.safety.incident.incident_id, 'played')
+            app.step()
+            audio.poll.return_value = None
             incident = app.safety.incident
             self.assertEqual(app.safety.state, SafetyState.AWAITING_RESPONSE)
             app.stop()

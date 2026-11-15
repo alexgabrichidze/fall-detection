@@ -35,7 +35,12 @@ class ApplicationFlowTests(unittest.TestCase):
 
     def begin(self):
         self.detector.emit_possible_fall()
-        return self.app.step()
+        view = self.app.step()
+        if view.state == SafetyState.ANNOUNCING:
+            self.audio.poll.return_value = AudioResult(self.app.safety.incident.incident_id, "played")
+            view = self.app.step()
+            self.audio.poll.return_value = None
+        return view
 
     def test_complete_flow_with_audio_error_camera_loss_and_delivery_failure(self):
         self.assertEqual(self.begin().state, SafetyState.AWAITING_RESPONSE)
@@ -113,7 +118,7 @@ class ApplicationFlowTests(unittest.TestCase):
         self.assertTrue(self.app.step((Command.PAUSE,)).paused)
         self.assertEqual(self.app.step((Command.SIMULATE_FALL,)).state, SafetyState.MONITORING)
         self.assertFalse(self.app.step((Command.PAUSE,)).paused)
-        self.assertEqual(self.app.step((Command.SIMULATE_FALL,)).state, SafetyState.AWAITING_RESPONSE)
+        self.assertEqual(self.app.step((Command.SIMULATE_FALL,)).state, SafetyState.ANNOUNCING)
 
     def test_source_mismatch_never_becomes_live_evidence(self):
         self.detector.emit_possible_fall()
@@ -131,7 +136,7 @@ class ApplicationFlowTests(unittest.TestCase):
         self.assertEqual(self.app.step((Command.RESET,)).state, SafetyState.MONITORING)
         self.assertIsNone(self.detector.latest_preview().model_score)
         self.clock.now = 12
-        self.assertEqual(self.app.step((Command.SIMULATE_FALL,)).state, SafetyState.AWAITING_RESPONSE)
+        self.assertEqual(self.app.step((Command.SIMULATE_FALL,)).state, SafetyState.ANNOUNCING)
 
     def test_blocked_notification_transport_leaves_pause_controls_responsive(self):
         from threading import Event

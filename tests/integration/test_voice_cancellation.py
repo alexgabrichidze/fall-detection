@@ -29,6 +29,8 @@ class VoiceCancellationTests(unittest.TestCase):
         self.audio.poll.return_value = AudioResult(self.incident.incident_id, 'played')
         view = self.app.step()
         self.audio.poll.return_value = None
+        if self.app.safety.incident and self.app.safety.incident.incident_id == self.incident.incident_id:
+            self.incident = self.app.safety.incident
         return view
 
     def test_no_capture_during_prompt_then_recognition_cancels(self):
@@ -64,7 +66,7 @@ class VoiceCancellationTests(unittest.TestCase):
         self.app.step()
         self.voice.poll.return_value = VoiceResult(self.incident.incident_id)
         self.prompt_finishes()
-        self.assertEqual(self.app.safety.state, SafetyState.AWAITING_RESPONSE)
+        self.assertEqual(self.app.safety.state, SafetyState.ANNOUNCING)
         self.voice.start.assert_not_called()
 
     def test_prompt_failure_keeps_manual_cancellation_and_countdown(self):

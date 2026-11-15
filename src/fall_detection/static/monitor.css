@@ -377,3 +377,5 @@ details code { display: block; margin-top: 6px; padding: 7px 9px; overflow-wrap:
   .activity-heading-meta { gap: 8px; }
   .app-wordmark { font-size: .7rem; }
 }
+
+.dashboard[data-announcing='true'] #cancel { grid-column: 1 / -1; }

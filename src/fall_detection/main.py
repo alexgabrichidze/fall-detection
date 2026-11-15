@@ -21,7 +21,8 @@ from .notifier import (
 )
 from .safety import EffectKind, SafetyController, SafetyState
 from .voice import DEFAULT_VOICE_MODEL, VoiceListener
-from .telegram_link import TelegramLink, telegram_config
+from .telegram_link import telegram_config
+from .hosted_telegram import create_browser_telegram_link
 
 
 DELIVERY_PROMPTS = {
@@ -198,6 +199,9 @@ class Application:
             incident_id = effect.incident.incident_id
             if effect.kind == EffectKind.PROMPT:
                 self._pending_prompts.append((incident_id, None))
+            elif effect.kind == EffectKind.PROMPT_TIMEOUT:
+                self._stop_response()
+                self.audio_status = "error: opening warning timed out"
             elif effect.kind == EffectKind.REMINDER:
                 if self.voice:
                     self.voice.cancel()
@@ -228,6 +232,7 @@ class Application:
         audio_result = self.audio.poll()
         if audio_result and audio_result.incident_id == self._audio_incident:
             self.audio_status = audio_result.status
+            self.safety.finish_prompt(audio_result.incident_id)
             if (self.voice and not self._pending_prompts and audio_result.status == "played"
                     and self.safety.incident and audio_result.incident_id == self.safety.incident.incident_id
                     and self.safety.state == SafetyState.AWAITING_RESPONSE):
@@ -242,6 +247,9 @@ class Application:
                 self.audio_status = "playing"
             elif self.audio_status != "playing":
                 self.audio_status = "error: audio worker unavailable"
+                if (path is None and getattr(self.audio, "busy", False) is not True
+                        and self.safety.finish_prompt(incident_id)):
+                    self._pending_prompts.popleft()
         return self.view()
 
     def view(self) -> View:
@@ -252,7 +260,7 @@ class Application:
                 error = "preview unavailable or stale"
         voice_status, listening = self.voice.status if self.voice else ("disabled", False)
         if (self.voice and self.audio_status == "playing" and not listening
-                and self.safety.state == SafetyState.AWAITING_RESPONSE):
+                and self.safety.state in (SafetyState.ANNOUNCING, SafetyState.AWAITING_RESPONSE)):
             voice_status = "waiting for prompt"
         elif (self.voice and self.audio_status.startswith("error")
               and self.safety.state == SafetyState.AWAITING_RESPONSE):
@@ -276,7 +284,7 @@ class Application:
             errors.append("notification worker still stopping; delivery may be uncertain")
         if self.safety.delivery == "pending":
             errors.append("pending alert at exit; delivery uncertain, no automatic retry")
-        if self.safety.remaining() is not None:
+        if self.safety.state in (SafetyState.SUSPECTED_FALL, SafetyState.ANNOUNCING, SafetyState.AWAITING_RESPONSE):
             errors.append("active countdown ended by application exit")
         return tuple(errors)
 
@@ -301,10 +309,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--microphone", type=int, help="sounddevice input index (default: system microphone)")
     parser.add_argument("--notification-outcome", choices=("simulated_accepted", "failed", "uncertain"), default="simulated_accepted")
     parser.add_argument("--telegram", action="store_true", help="enable real Telegram alerts in the live window")
+    parser.add_argument("--private-bot", action="store_true", help="use your own bot token instead of the hosted shared bot (live --web only)")
     parser.add_argument("--test-telegram", action="store_true", help="send one labelled test using environment credentials")
     args = parser.parse_args(argv)
     if args.test_telegram:
-        if args.detector or args.ui or args.web or args.headless or args.telegram:
+        if args.detector or args.ui or args.web or args.headless or args.telegram or args.private_bot:
             parser.error("--test-telegram is a standalone setup command")
         try:
             sender = TelegramSender(telegram_config())
@@ -316,6 +325,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.detector is None:
         parser.error("--detector is required unless using --test-telegram")
     live = args.detector == "live"
+    if args.private_bot and not (live and args.web):
+        parser.error("--private-bot requires --detector live --web")
     if args.voice and not live:
         parser.error("--voice requires --detector live; simulations never capture microphone audio")
     if args.microphone is not None and (not args.voice or args.microphone < 0):
@@ -339,7 +350,7 @@ def main(argv: list[str] | None = None) -> int:
         else:
             timing = ScaffoldConfig(duration if duration is not None else max(1.0, args.event_after + 1), args.event_after)
             detector = FakeDetector()
-        telegram = TelegramLink() if args.web and live else None
+        telegram = create_browser_telegram_link(private=args.private_bot) if args.web and live else None
         receive = None
         clips_enabled = None
         if telegram:

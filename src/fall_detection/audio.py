@@ -29,6 +29,10 @@ class PromptPlayer:
         self._thread = Thread(target=self._run, name="prompt-audio", daemon=True)
         self._thread.start()
 
+    @property
+    def busy(self) -> bool:
+        return self._busy
+
     def play(self, incident_id: str, path: Path | None = None) -> bool:
         if self._busy or self._stop.is_set() or not self._thread.is_alive():
             return False

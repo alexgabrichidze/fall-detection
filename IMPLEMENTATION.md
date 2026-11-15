@@ -121,7 +121,7 @@ Reference: [MediaPipe Pose Landmarker](https://developers.google.com/edge/mediap
 
 - [x] Implement monitoring, suspected fall, awaiting response, and alerting states.
 - [x] Assign an identifier to each incident.
-- [x] Start one countdown when a suspected fall becomes an incident.
+- [x] Play the opening warning first, then start one full response countdown for the incident.
 - [x] Use a monotonic clock so system-clock changes cannot alter the countdown.
 - [x] Allow explicit cancellation.
 - [x] Prevent repeated detections from restarting the countdown or creating duplicate incidents.
@@ -132,7 +132,7 @@ Reference: [MediaPipe Pose Landmarker](https://developers.google.com/edge/mediap
 ## 9. Add the prompt and local controls (B)
 
 - [x] Bundle a local "Are you okay?" WAV prompt.
-- [x] Play it once when the countdown starts.
+- [x] Play it once before the response countdown starts, while retaining manual cancellation.
 - [x] Keep audio playback from blocking controls or the countdown.
 - [x] Display remaining countdown time.
 - [x] Add an on-screen cancellation button and a keyboard shortcut.
@@ -217,3 +217,25 @@ The posture estimator uses geometric rules rather than a pretrained multiclass
 activity model. Its support values are not calibrated class probabilities.
 Verification uses synthetic landmarks and browser scenarios; it does not establish
 recognition accuracy for real activities.
+
+
+## 16. Share the hosted bot flow with the local browser monitor
+
+- [x] Default live `--web` sessions to the existing hosted pairing service without requesting a bot token.
+- [x] Keep chat-scoped grants private and scoped to the configured HTTPS deployment.
+- [x] Reuse the hosted alert, MP4 upload, test-message, and caregiver-reply endpoints.
+- [x] Preserve private-bot settings and offer explicit `--private-bot` setup.
+- [x] Cover pairing expiry, credential handling, simulation isolation, delivery uncertainty, and local HTTP integration with mocked service calls.
+
+A live request confirmed that the deployed service issues a valid pairing link.
+No caregiver alert or setup message was sent during verification.
+
+
+## 17. Start the response window after the warning
+
+- [x] Add an explicit announcing phase with no running countdown in desktop and browser versions.
+- [x] Start the full response window on opening playback completion, or after a playback error.
+- [x] Keep cancellation available during the warning and reject stale completion callbacks.
+- [x] Cancel stalled opening playback after 12 seconds and begin a full response window.
+- [x] Keep reminder timing and alert expiry tied to the response deadline without extending it.
+- [x] Verify a simulated six-second warning followed by twenty response seconds, cancellation, errors, timeouts, and one alert at expiry.

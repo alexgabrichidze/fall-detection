@@ -13,6 +13,7 @@ from .activity import ActivityTracker
 from .camera_inputs import list_camera_inputs
 from .notifier import DeliveryStatus
 from .telegram_link import TelegramLink
+from .hosted_telegram import HostedTelegramLink
 
 _STATIC = Path(__file__).with_name("static")
 _ASSETS = {
@@ -24,7 +25,7 @@ _ASSETS = {
 
 
 class WebDevice:
-    def __init__(self, port: int, *, live: bool, countdown: float, telegram: TelegramLink | None,
+    def __init__(self, port: int, *, live: bool, countdown: float, telegram: TelegramLink | HostedTelegramLink | None,
                  camera_index: Callable[[], int] | None = None,
                  select_camera: Callable[[int], None] | None = None):
         self.live = live

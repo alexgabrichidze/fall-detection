@@ -23,8 +23,9 @@ class SafetyTests(unittest.TestCase):
     def test_expiry_emits_one_prompt_and_one_alert_despite_repeated_evidence(self):
         self.assertTrue(self.safety.observe(self.fall()))
         self.assertEqual(self.safety.state, SafetyState.SUSPECTED_FALL)
-        incident = self.safety.incident
         self.assertEqual([effect.kind for effect in self.safety.tick()], [EffectKind.PROMPT])
+        self.assertTrue(self.safety.finish_prompt(self.safety.incident.incident_id))
+        incident = self.safety.incident
         self.clock.now = 12
         self.assertFalse(self.safety.observe(self.fall("another")))
         self.assertEqual(self.safety.remaining(), 3)
@@ -41,6 +42,7 @@ class SafetyTests(unittest.TestCase):
     def test_cancel_immediately_before_expiry_prevents_alert_and_requires_reset(self):
         self.safety.observe(self.fall())
         self.safety.tick()
+        self.safety.finish_prompt(self.safety.incident.incident_id)
         self.clock.now = 14.999999
         self.assertTrue(self.safety.cancel())
         self.clock.now = 100
@@ -53,13 +55,17 @@ class SafetyTests(unittest.TestCase):
 
     def test_cancel_at_deadline_cannot_retract_alert(self):
         self.safety.observe(self.fall())
+        self.safety.tick()
+        self.safety.finish_prompt(self.safety.incident.incident_id)
         self.clock.now = 15
         self.assertFalse(self.safety.cancel())
-        self.assertEqual([effect.kind for effect in self.safety.tick()], [EffectKind.PROMPT, EffectKind.ALERT])
+        self.assertEqual([effect.kind for effect in self.safety.tick()], [EffectKind.ALERT])
         self.assertFalse(self.safety.cancel())
 
     def test_fault_does_not_cancel_incident_or_change_deadline(self):
         self.safety.observe(self.fall())
+        self.safety.tick()
+        self.safety.finish_prompt(self.safety.incident.incident_id)
         incident = self.safety.incident
         fault = DetectionEvent("fault", 11, DetectionSource.SIMULATED, EventKind.FAULT,
                                fault_code=FaultCode.CAMERA_FAILURE)
@@ -73,6 +79,7 @@ class SafetyTests(unittest.TestCase):
     def test_only_matching_delivery_result_unlocks_rearm(self):
         self.safety.observe(self.fall())
         self.safety.tick()
+        self.safety.finish_prompt(self.safety.incident.incident_id)
         self.clock.now = 15
         self.safety.tick()
         self.safety.delivery_result("different incident", "failed")

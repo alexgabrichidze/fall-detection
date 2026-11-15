@@ -128,7 +128,7 @@ function renderCamera(view) {
   element('camera-placeholder').disabled = monitorBusy || view.permissionPending || !view.live;
   element('camera-placeholder').setAttribute('aria-label', title);
   const voiceToggle = element('voice-toggle');
-  const showVoiceToggle = Boolean(browserMonitor && view.running && view.remaining === null);
+  const showVoiceToggle = Boolean(browserMonitor && view.running && view.remaining === null && !['announcing', 'suspected_fall'].includes(view.incident));
   text('voice-toggle', voiceBusy ? 'Setting up…' : view.voiceEnabled ? 'Voice on' : 'Enable voice');
   voiceToggle.setAttribute('aria-label', view.voiceEnabled ? 'Turn off voice cancellation' : 'Enable voice cancellation');
   voiceToggle.disabled = voiceBusy;
@@ -154,11 +154,17 @@ function renderCamera(view) {
 
 function renderIncident(view) {
   const awaiting = view.remaining !== null;
-  visible('incident-card', awaiting || ['cancelled', 'alerting'].includes(view.incident) || ['help', 'false_alarm'].includes(view.caregiver));
+  const announcing = ['announcing', 'suspected_fall'].includes(view.incident);
+  const active = awaiting || announcing;
+  visible('incident-card', active || ['cancelled', 'alerting'].includes(view.incident) || ['help', 'false_alarm'].includes(view.caregiver));
   let title = view.running && !view.paused && !view.fault ? 'Monitoring' : 'Ready to monitor';
   let detail = 'The response countdown will appear here.';
   let tone = 'steady';
-  if (awaiting) {
+  if (announcing) {
+    title = 'Checking in';
+    detail = `Playing the warning. Your ${view.countdown}-second timer starts afterward.`;
+    tone = 'warning';
+  } else if (awaiting) {
     title = 'Possible fall detected';
     detail = 'If you’re okay, cancel before the countdown ends.';
     tone = 'warning';
@@ -187,10 +193,11 @@ function renderIncident(view) {
   text('incident-detail', detail);
   element('incident-panel').dataset.tone = tone;
   const wasAwaiting = element('dashboard').dataset.urgent === 'true';
-  element('dashboard').dataset.urgent = awaiting;
-  if (awaiting && !wasAwaiting) document.querySelector('.rail').scrollTop = 0;
+  element('dashboard').dataset.urgent = active;
+  element('dashboard').dataset.announcing = announcing;
+  if (active && !wasAwaiting) document.querySelector('.rail').scrollTop = 0;
   visible('countdown-panel', awaiting);
-  visible('cancel', awaiting);
+  visible('cancel', active);
   element('cancel').disabled = monitorBusy;
   visible('rearm', view.incident === 'cancelled' || (view.incident === 'alerting' && view.delivery !== 'pending'));
   element('rearm').disabled = monitorBusy;
@@ -201,7 +208,7 @@ function renderIncident(view) {
   }
   text('voice-status', view.listening ? 'Microphone active' : (view.voice || 'Disabled'));
   element('voice-status').title = view.voice || '';
-  visible('voice-status', view.listening || (awaiting && !['disabled', 'ready', undefined].includes(view.voice)));
+  visible('voice-status', view.listening || (active && !['disabled', 'ready', undefined].includes(view.voice)));
 }
 
 // Keep row nodes stable while ranking live scalar evidence; never store history.

@@ -232,25 +232,38 @@ export class BrowserMonitor {
   }
 
   fall() {
+    if (this.view.incident !== 'monitoring') return;
     this.id = crypto.randomUUID();
-    this.deadline = Date.now() + COUNTDOWN;
+    this.deadline = null;
+    this.warningDeadline = Date.now() + 12000;
     this.reminded = false;
     this.view.caregiver = null;
-    this.view.incident = 'awaiting_response';
+    this.view.incident = 'announcing';
     this.recordings.mark();
-    this.prompt(this.voice?.enabled ? 'fall-warning-voice-20' : 'fall-warning-20', this.id);
+    this.prompt(this.voice?.enabled ? 'fall-warning-voice-20' : 'fall-warning-20', this.id, true);
   }
 
-  async prompt(name, incident) {
+  beginResponse(incident) {
+    if (this.id !== incident || this.view.incident !== 'announcing') return false;
+    this.deadline = Date.now() + COUNTDOWN;
+    this.warningDeadline = null;
+    this.view.incident = 'awaiting_response';
+    return true;
+  }
+
+  async prompt(name, incident, opening = false) {
     this.voice?.stop();
-    const played = await this.audio.play(name);
+    let played = false;
+    try { played = await this.audio.play(name); } catch { /* Start the window if audio fails. */ }
+    if (opening && !this.beginResponse(incident)) return;
     if (played && this.id === incident && this.view.incident === 'awaiting_response' && Date.now() < this.deadline) {
       this.voice?.listen(() => this.cancel());
     }
   }
 
   cancel() {
-    if (this.view.incident !== 'awaiting_response' || Date.now() >= this.deadline) return;
+    if (!['announcing', 'awaiting_response'].includes(this.view.incident)
+        || (this.view.incident === 'awaiting_response' && Date.now() >= this.deadline)) return;
     this.voice?.stop();
     this.recordings.discard();
     this.view.incident = 'cancelled';
@@ -261,6 +274,7 @@ export class BrowserMonitor {
     if (this.view.incident !== 'cancelled'
         && (this.view.incident !== 'alerting' || this.view.delivery === 'pending')) return;
     this.id = null;
+    this.deadline = this.warningDeadline = null;
     this.voice?.stop();
     this.audio.cancel();
     this.audio.status = 'not requested';
@@ -284,7 +298,12 @@ export class BrowserMonitor {
 
   tick() {
     const now = Date.now();
-    if (this.view.incident === 'awaiting_response') {
+    if (this.view.incident === 'announcing') {
+      if (now >= this.warningDeadline) {
+        this.audio.cancel();
+        this.beginResponse(this.id);
+      }
+    } else if (this.view.incident === 'awaiting_response') {
       if (now >= this.deadline) this.sendAlert(this.id);
       else if (!this.reminded && now >= this.deadline - 10000) {
         this.reminded = true;

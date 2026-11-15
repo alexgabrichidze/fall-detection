@@ -1,7 +1,7 @@
 """Clock-driven incident logic. No device, network, or model dependencies."""
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
 from math import isfinite
 from time import monotonic
@@ -13,6 +13,7 @@ from .contracts import DetectionEvent, DetectionSource, EventKind
 class SafetyState(StrEnum):
     MONITORING = "monitoring"
     SUSPECTED_FALL = "suspected_fall"
+    ANNOUNCING = "announcing"
     AWAITING_RESPONSE = "awaiting_response"
     ALERTING = "alerting"
     CANCELLED = "cancelled"
@@ -20,6 +21,7 @@ class SafetyState(StrEnum):
 
 class EffectKind(StrEnum):
     PROMPT = "prompt"
+    PROMPT_TIMEOUT = "prompt_timeout"
     REMINDER = "reminder"
     ALERT = "alert"
 
@@ -29,7 +31,7 @@ class Incident:
     incident_id: str
     source: DetectionSource
     started_at: float
-    deadline: float
+    deadline: float | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,6 +46,8 @@ class SafetyController:
     Detection faults and pause do not affect an existing incident. Call tick
     regularly even when detection is unavailable. Controls should be processed
     before tick; cancellation at or after the deadline cannot retract an alert.
+    The opening warning runs in ANNOUNCING; finish_prompt() starts the full
+    response window. A bounded warning timeout permits recovery from audio loss.
     Reset establishes a timestamp barrier against queued, pre-reset evidence.
     """
 
@@ -54,6 +58,7 @@ class SafetyController:
         self._countdown = countdown_seconds
         self._armed_after = float("-inf")
         self._reminder_due = False
+        self._prompt_started_at = None
         self.state = SafetyState.MONITORING
         self.incident: Incident | None = None
         self.delivery = "none"
@@ -67,7 +72,7 @@ class SafetyController:
         # A detector using another clock domain is not usable evidence.
         if event.timestamp > now:
             return False
-        self.incident = Incident(str(uuid4()), event.source, now, now + self._countdown)
+        self.incident = Incident(str(uuid4()), event.source, now, None)
         self.state = SafetyState.SUSPECTED_FALL
         self._reminder_due = self._countdown > 10
         self.delivery = "none"
@@ -76,8 +81,13 @@ class SafetyController:
     def tick(self) -> tuple[Effect, ...]:
         effects = []
         if self.state == SafetyState.SUSPECTED_FALL:
-            self.state = SafetyState.AWAITING_RESPONSE
+            self.state = SafetyState.ANNOUNCING
+            self._prompt_started_at = self._clock()
             effects.append(Effect(EffectKind.PROMPT, self.incident))
+        # WAV playback is capped at 10 seconds. Bound a stalled audio worker too.
+        if self.state == SafetyState.ANNOUNCING and self._clock() - self._prompt_started_at >= 12:
+            self.finish_prompt(self.incident.incident_id)
+            effects.append(Effect(EffectKind.PROMPT_TIMEOUT, self.incident))
         if self.state == SafetyState.AWAITING_RESPONSE:
             remaining = self.incident.deadline - self._clock()
             if remaining <= 0:
@@ -89,15 +99,24 @@ class SafetyController:
                 effects.append(Effect(EffectKind.REMINDER, self.incident))
         return tuple(effects)
 
+    def finish_prompt(self, incident_id: str) -> bool:
+        """Start the complete response window once, after warning completion."""
+        if (self.state != SafetyState.ANNOUNCING or self.incident is None
+                or self.incident.incident_id != incident_id):
+            return False
+        self.incident = replace(self.incident, deadline=self._clock() + self._countdown)
+        self.state = SafetyState.AWAITING_RESPONSE
+        return True
+
     def remaining(self) -> float | None:
-        if self.state not in (SafetyState.SUSPECTED_FALL, SafetyState.AWAITING_RESPONSE):
+        if self.state != SafetyState.AWAITING_RESPONSE:
             return None
         return max(0.0, self.incident.deadline - self._clock())
 
     def cancel(self) -> bool:
-        if self.state not in (SafetyState.SUSPECTED_FALL, SafetyState.AWAITING_RESPONSE):
+        if self.state not in (SafetyState.SUSPECTED_FALL, SafetyState.ANNOUNCING, SafetyState.AWAITING_RESPONSE):
             return False
-        if self._clock() >= self.incident.deadline:
+        if self.state == SafetyState.AWAITING_RESPONSE and self._clock() >= self.incident.deadline:
             return False
         self.state = SafetyState.CANCELLED
         return True

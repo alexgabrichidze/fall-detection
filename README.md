@@ -1,6 +1,6 @@
 # Safe&Sound
 
-Monitor one person with a webcam. A possible fall starts a spoken check-in and a 20-second response window. Tap **I'm okay** on screen or say **“I'm okay”** out loud when voice cancellation is enabled. Safe&Sound calls out ten seconds remaining, confirms cancellation, and announces whether the alert was sent. If the countdown expires, the linked caregiver receives a short, silent clip when available. Detection and cancellation work offline after setup.
+Monitor one person with a webcam. A possible fall plays a spoken check-in, then starts a full 20-second response window after the warning finishes. Tap **I'm okay** on screen or say **“I'm okay”** out loud when voice cancellation is enabled. Safe&Sound calls out ten seconds remaining, confirms cancellation, and announces whether the alert was sent. If the countdown expires, the linked caregiver receives a short, silent clip when available. Detection and cancellation work offline after setup.
 
 ## Use Safe&Sound on a phone
 
@@ -53,7 +53,7 @@ On Windows, create the environment with `py -3.12 -m venv .venv` and activate it
 
 The window shows camera, pose, classifier, audio, and delivery status. Missing or unreliable tracking clears the movement window and displays an unknown score. If the camera fails, restart the app to reopen it. The app keeps an active countdown running through camera loss or a failed prompt.
 
-The voice prompts play locally through the speakers. Use `--prompt PATH` to replace the opening message with your own mono or stereo 16-bit PCM WAV up to 10 seconds long. Microphone capture is off unless you enable optional voice cancellation.
+The voice prompts play locally through the speakers. The response countdown starts after the opening warning finishes; the ten-second reminder uses that new deadline. Cancellation remains available while the warning plays. If playback fails, the full response window still starts. A stalled opening warning is cancelled after 12 seconds before the countdown begins. Use `--prompt PATH` to replace the opening message with your own mono or stereo 16-bit PCM WAV up to 10 seconds long. Microphone capture is off unless you enable optional voice cancellation.
 
 ## Live activity panel
 
@@ -99,7 +99,11 @@ The caregiver can tap **Help is on the way** to play a spoken acknowledgment at 
 
 ### Connect Telegram on a desktop install
 
-The desktop monitor communicates directly with Telegram. **Connect Telegram** accepts a token from BotFather and saves it in the private local file `.env.telegram.json`. Use a dedicated desktop bot for local pairing and reply buttons. Telegram delivers the hosted bot's incoming updates to its Netlify webhook. A desktop with an already configured chat can still send directly through that bot. The native window can reuse a saved pairing with `fall-detection --detector live --telegram` or use environment variables.
+The local browser monitor now uses the same hosted bot as the installable app. Start it normally, click **Connect Telegram**, open the link, tap **Start** in Telegram, then click **Finish linking**. No BotFather token is needed on this computer. Alerts, silent clips, and caregiver replies use the hosted service at `https://safe-n-sound.netlify.app`.
+
+Each local installation pairs its own caregiver chat. Its chat-scoped grant is stored privately in `.env.telegram-hosted.json`, outside Git; the shared bot token stays on Netlify. Existing personal-bot settings in `.env.telegram.json` are preserved. `SAFE_SOUND_TELEGRAM_URL` can select another HTTPS deployment of the same service. Service failures show an error and do not fall back to asking for a private token.
+
+To use your own bot instead, launch with `fall-detection --detector live --web --private-bot`. **Connect Telegram** then accepts a BotFather token and uses `.env.telegram.json`. Use a dedicated desktop bot for local pairing and reply buttons: the shared bot's incoming updates belong to its hosted webhook. The native window keeps its existing personal-bot behavior through `fall-detection --detector live --telegram` or environment variables.
 
 1. Create a dedicated bot with [BotFather](https://t.me/BotFather).
 2. Have the intended recipient open the bot's private chat and send it one message. Find the numeric `message.chat.id` using [getUpdates](https://core.telegram.org/bots/api#getupdates).
