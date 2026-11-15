@@ -7,6 +7,9 @@ from threading import Event, Thread
 import wave
 
 
+PROMPTS = Path(__file__).with_name("prompts")
+
+
 @dataclass(frozen=True, slots=True)
 class AudioResult:
     incident_id: str
@@ -18,7 +21,7 @@ class PromptPlayer:
 
     def __init__(self, path: Path | None):
         self._path = path
-        self._jobs: Queue[str] = Queue(maxsize=1)
+        self._jobs: Queue[tuple[str, Path | None]] = Queue(maxsize=1)
         self._results: Queue[AudioResult] = Queue(maxsize=2)
         self._stop = Event()
         self._cancel = Event()
@@ -26,12 +29,12 @@ class PromptPlayer:
         self._thread = Thread(target=self._run, name="prompt-audio", daemon=True)
         self._thread.start()
 
-    def play(self, incident_id: str) -> bool:
+    def play(self, incident_id: str, path: Path | None = None) -> bool:
         if self._busy or self._stop.is_set() or not self._thread.is_alive():
             return False
         self._cancel.clear()
         try:
-            self._jobs.put_nowait(incident_id)
+            self._jobs.put_nowait((incident_id, path))
         except Full:
             return False
         self._busy = True
@@ -54,14 +57,15 @@ class PromptPlayer:
         self._thread.join(timeout)
         return not self._thread.is_alive()
 
-    def _play(self) -> str:
-        if self._path is None:
+    def _play(self, path: Path | None = None) -> str:
+        path = path or self._path
+        if path is None:
             return "error: prompt WAV not configured"
         # Imported only on the audio worker, never needed by headless tests.
         import numpy as np
         import sounddevice as sd
 
-        with wave.open(str(self._path), "rb") as prompt:
+        with wave.open(str(path), "rb") as prompt:
             channels, width, rate, frames = (
                 prompt.getnchannels(), prompt.getsampwidth(), prompt.getframerate(), prompt.getnframes()
             )
@@ -85,11 +89,11 @@ class PromptPlayer:
     def _run(self):
         while not self._stop.is_set():
             try:
-                incident_id = self._jobs.get(timeout=0.05)
+                incident_id, path = self._jobs.get(timeout=0.05)
             except Empty:
                 continue
             try:
-                status = self._play()
+                status = self._play(path)
             except Exception:
                 status = "error: prompt unavailable or audio playback failed"
             self._results.put_nowait(AudioResult(incident_id, status))

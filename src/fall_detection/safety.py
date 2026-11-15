@@ -20,6 +20,7 @@ class SafetyState(StrEnum):
 
 class EffectKind(StrEnum):
     PROMPT = "prompt"
+    REMINDER = "reminder"
     ALERT = "alert"
 
 
@@ -52,6 +53,7 @@ class SafetyController:
         self._clock = clock
         self._countdown = countdown_seconds
         self._armed_after = float("-inf")
+        self._reminder_due = False
         self.state = SafetyState.MONITORING
         self.incident: Incident | None = None
         self.delivery = "none"
@@ -67,6 +69,7 @@ class SafetyController:
             return False
         self.incident = Incident(str(uuid4()), event.source, now, now + self._countdown)
         self.state = SafetyState.SUSPECTED_FALL
+        self._reminder_due = self._countdown > 10
         self.delivery = "none"
         return True
 
@@ -75,10 +78,15 @@ class SafetyController:
         if self.state == SafetyState.SUSPECTED_FALL:
             self.state = SafetyState.AWAITING_RESPONSE
             effects.append(Effect(EffectKind.PROMPT, self.incident))
-        if self.state == SafetyState.AWAITING_RESPONSE and self._clock() >= self.incident.deadline:
-            self.state = SafetyState.ALERTING
-            self.delivery = "pending"
-            effects.append(Effect(EffectKind.ALERT, self.incident))
+        if self.state == SafetyState.AWAITING_RESPONSE:
+            remaining = self.incident.deadline - self._clock()
+            if remaining <= 0:
+                self.state = SafetyState.ALERTING
+                self.delivery = "pending"
+                effects.append(Effect(EffectKind.ALERT, self.incident))
+            elif self._reminder_due and remaining <= 10:
+                self._reminder_due = False
+                effects.append(Effect(EffectKind.REMINDER, self.incident))
         return tuple(effects)
 
     def remaining(self) -> float | None:
@@ -94,10 +102,12 @@ class SafetyController:
         self.state = SafetyState.CANCELLED
         return True
 
-    def delivery_result(self, incident_id: str, outcome: str) -> None:
+    def delivery_result(self, incident_id: str, outcome: str) -> bool:
         if (self.state == SafetyState.ALERTING and self.incident.incident_id == incident_id
                 and self.delivery == "pending"):
             self.delivery = outcome
+            return True
+        return False
 
     def reset(self) -> bool:
         if self.state == SafetyState.CANCELLED or (
