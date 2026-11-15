@@ -1,208 +1,81 @@
 # Fall Detection Prototype
 
-Computer-first, local fall detection project. Requirements are in
-[AGENTS.md](AGENTS.md); ownership and tasks are in
-[IMPLEMENTATION.md](IMPLEMENTATION.md).
+Monitor one person with a webcam. A possible fall starts an “Are you okay?” prompt and a 20-second response window. Cancel locally or let the countdown expire to attempt one caregiver alert. Video and pose landmarks stay in memory on the device. Detection and cancellation work offline after setup.
 
-## Current behavior
+## Run in your browser
 
-Person B's application works with the explicitly simulated detector: incident
-states, countdown, cancellation, pause/resume, explicit rearming, an OpenCV status
-window, asynchronous prompt playback, and asynchronous notification results.
-Fake runs always use a fake notification sender, even if Telegram credentials
-exist in the environment. No camera opens, no model runs, and no microphone is
-captured. Live mode still exits with an explicit error until A's verified detector
-is integrated. Nothing here establishes detection accuracy.
+Use Python 3.12 in a desktop session. The full project ZIP includes the fall model. For a Git checkout, download it once using the command in [models/README.md](models/README.md).
 
-There is no prompt recording yet. A missing/unreadable prompt or failed playback
-shows an audio error and leaves countdown/cancellation available. The Telegram
-transport is implemented and tested with mocked HTTP; no real bot or destination
-has been configured or contacted.
-
-## Install and run
-
-The headless simulation uses Python 3.11+ and the standard library:
+From the project directory, with a webcam positioned to show the person and floor, run
 
 ```bash
-python -m venv .venv
+python3.12 -m venv .venv
 source .venv/bin/activate
-python -m pip install -e .
+python -m pip install -e '.[detection,audio]'
+fall-detection --detector live --web
+```
+
+Open `http://127.0.0.1:8765` and click **Start camera**. Use **Stop camera** to release it. Leave the Terminal process running while you monitor. `--port` selects a different local port. The browser receives previews from the app on this computer.
+
+On the first Mac launch, allow camera access when macOS prompts. If access is off, enable it for the app you launched from (usually Terminal) in **System Settings → Privacy & Security → Camera**, then relaunch.
+
+On Windows, create the environment with `py -3.12 -m venv .venv` and activate it with `.venv\Scripts\Activate.ps1`. Live mode was exercised on Apple Silicon with Python 3.12.14. MediaPipe 0.10.21's macOS universal2 wheel has an x86_64-only tag in its internal metadata, so `pip check` can flag it on Apple Silicon even though the arm64 build imports and runs.
+
+`--camera 1` selects a different webcam. `--countdown SECONDS` changes the response window. `--model PATH` supplies the pinned checkpoint from a different location. `--headless` runs a finite console dry run. Launch without `--web` to use the native OpenCV window.
+
+| Control | Action |
+| --- | --- |
+| **C**, **Space**, or **I'm okay / Cancel** | Cancel before the deadline. |
+| **P** or **Pause / Resume** | Pause tracking and clear old movement evidence. An active countdown continues. |
+| **R** or **Reset / Rearm** | Return to monitoring after cancellation or a delivery result. |
+| **Q**, **Esc**, or close the window | Exit. The app reports pending delivery as uncertain on exit. |
+
+The window shows camera, pose, classifier, audio, and delivery status. Missing or unreliable tracking clears the movement window and displays an unknown score. If the camera fails, restart the app to reopen it. The app keeps an active countdown running through camera loss or a failed prompt.
+
+The bundled prompt is a local 16-bit PCM WAV. Use `--prompt PATH` for your own mono or stereo WAV up to 10 seconds. The app uses speaker output only.
+
+## Send real Telegram alerts
+
+In the browser, click **Connect Telegram** and use the saved bot or enter a token from BotFather. Follow **Open Telegram**, tap **Start** from the chat that should receive alerts, then return to the monitor and click **Finish linking**. Click **Send test message** to verify delivery. The link expires after 10 minutes. The app saves the bot credential and paired recipient in a private local settings file, `.env.telegram.json`, in the project directory.
+
+The native window can reuse the linked chat with `fall-detection --detector live --telegram`. To configure the native window from environment variables instead, follow these steps.
+
+1. Create a dedicated bot with [BotFather](https://t.me/BotFather).
+2. Have the intended recipient open the bot's private chat and send it one message. Find the numeric `message.chat.id` using [getUpdates](https://core.telegram.org/bots/api#getupdates).
+3. Set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` locally. In Bash or Zsh, use the commands below to avoid putting their values in shell history.
+
+```bash
+printf 'Bot token: '
+read -rs TELEGRAM_BOT_TOKEN
+printf '\nChat ID: '
+read -r TELEGRAM_CHAT_ID
+export TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID
+```
+
+`fall-detection --test-telegram` sends one labelled setup message to that chat. When the recipient confirms it arrived, start monitoring with
+
+```bash
+fall-detection --detector live --telegram
+```
+
+Alerts contain a possible-fall message and an incident ID. The app makes one attempt per incident. `telegram_accepted_no_acknowledgement` means Telegram accepted the message. `failed` means delivery was rejected or could not be started. `uncertain` means the app could not establish whether Telegram received it. Use the window to rearm after a delivery result.
+
+## Demo without a camera
+
+A console simulation works with the standard-library install (`python -m pip install -e .`). The window uses the `ui` extra and the prompt uses the `audio` extra. The live install already includes both dependencies.
+
+```bash
+fall-detection --detector fake --web --scenario idle --countdown 5
 fall-detection --detector fake --countdown 0.2 --duration 1
+fall-detection --detector fake --ui --scenario idle --countdown 5 --prompt assets/prompts/are-you-okay.wav
 ```
 
-On Windows, activate with `.venv\Scripts\Activate.ps1` in PowerShell.
-`python -m fall_detection` is also supported. The console run defaults to one
-second; it has no interactive cancellation controls. Use the window for controls:
+In the simulation window, press **F** to start a simulated fall or **X** to simulate camera failure. Every notification stays in simulation. Use `--notification-outcome failed` or `--notification-outcome uncertain` to demonstrate delivery failures. The `possible-fall`, `camera-failure`, `pose-missing`, and `fall-camera-failure` scenarios can inject an event automatically.
 
-```bash
-python -m pip install -c requirements-device.txt -e '.[ui,audio]'
-fall-detection --detector fake --ui --scenario idle
-```
+## Detector and verification
 
-The window remains open until quit unless `--duration SECONDS` is provided.
-Use `--scenario possible-fall` (the default) to inject a fall after 0.1 seconds,
-or press F while idle. Countdown defaults to 20 seconds. Scenarios also include
-`camera-failure`, `pose-missing`, and `fall-camera-failure`. `--event-after` changes
-scenario timing. Run simulated failure cases without credentials or internet:
+The detector tracks one person with MediaPipe Pose, runs the pinned Transformer with LiteRT, and combines its score with a sustained change in torso height and orientation. Expect a brief warm-up while the detector collects 30 reliable samples. The score is an experimental model output. See [models/README.md](models/README.md) for the checkpoint, input layout, and reference comparison.
 
-```bash
-fall-detection --detector fake --ui --scenario fall-camera-failure --countdown 5 --notification-outcome failed
-fall-detection --detector fake --countdown 0.2 --duration 1 --notification-outcome uncertain
-```
+The app was exercised with four upstream clips on Apple Silicon. Clips 1–3 each raised one possible fall and clip 4 raised none. Replay covered prompt playback, cancellation, and countdown expiry after loss of input. A live session confirmed webcam startup after macOS camera approval. In a separate 20-second prerecorded rehearsal, Telegram accepted one labeled test alert. Real-world detection accuracy remains unverified. Use this prototype for a supervised demo and evaluation.
 
-All scenarios, camera statuses, scores, and delivery outcomes in fake mode are
-simulated. A possible-fall event is evidence for incident handling, not a
-validated detection or a caregiver alert by itself.
-
-### Window controls and incident behavior
-
-- C or Space, or **I'm okay / Cancel**: cancel before the countdown deadline.
-- P or **Pause / Resume**: pause detection. An active countdown continues.
-- R or **Reset / Rearm**: explicitly rearm after cancellation or a delivery
-  result. Reset is refused while delivery is pending. Rearming clears old
-  detector history and rejects events timestamped before or at reset.
-- Q or Escape, or close the window: exit. An active countdown ends on exit;
-  a pending delivery is reported as uncertain. There is no crash recovery.
-- F: inject a fake fall. X: inject a fake camera failure. Fake fall injection
-  is refused while paused or faulted. Restart the app to clear a latched fault.
-
-Repeated detections do not extend an active countdown or create duplicate
-incidents. Cancellation at or after the deadline cannot retract an alert.
-There is one automatic notification attempt per incident, with no automatic
-retry. Terminal incident status stays visible until explicit reset. The operator
-should only rearm when ready to monitor a new incident; fresh detection evidence
-can start another countdown after reset.
-
-Camera failure, missing/unreliable pose, pause, detector errors, incident state,
-audio status, and delivery are shown separately. Missing pose or score means
-unknown. Loss of visibility alone does not start an incident. Detector exceptions
-and stale live previews are displayed as unavailable; they do not cancel an
-active incident. HighGUI runs on the main application thread; A's detector must
-honor the nonblocking contract.
-
-### Prerecorded prompt
-
-When available, supply a local recording saying "Are you okay?":
-
-```bash
-fall-detection --detector fake --ui --prompt /absolute/path/are-you-okay.wav
-```
-
-Supported format: 16-bit PCM WAV, mono or stereo, at most 10 seconds. The prompt
-plays once per incident, on a worker. Playback is cancelled when the incident is
-cancelled or its response window ends. Prompt failures do not stop the safety
-flow. No recording is included; speaker playback still needs a hardware check.
-The application never opens a microphone. Optional Vosk voice cancellation is
-not implemented.
-
-### Telegram setup (later, separate from simulation)
-
-1. Create a dedicated bot through [@BotFather](https://t.me/BotFather), using
-   `/newbot`. Follow [Telegram's official setup guide](https://core.telegram.org/bots/tutorial#obtain-your-bot-token).
-2. Open a private chat with the bot from the intended test recipient's account
-   and send a message. Obtain that chat's numeric `message.chat.id` with
-   [getUpdates](https://core.telegram.org/bots/api#getupdates). Use a local API
-   client that does not log the token or response. Choose exactly one destination.
-3. Set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` locally. Do not put actual
-   values in source code, shell history, logs, screenshots, or chat. On Bash,
-   hidden input avoids putting credentials into command history:
-
-```bash
-read -rsp 'Bot token: ' TELEGRAM_BOT_TOKEN
-export TELEGRAM_BOT_TOKEN
-read -rp 'Test chat ID: ' TELEGRAM_CHAT_ID
-export TELEGRAM_CHAT_ID
-```
-
-Only when ready to contact that destination, explicitly run:
-
-```bash
-fall-detection --test-telegram
-```
-
-This standalone command sends one clearly labelled test message. It is never
-invoked during installation, tests, or fake runs. Environment files are ignored
-by Git but are not automatically loaded by the application.
-
-Incident messages contain only a possible-fall notice and an incident ID; no
-video, landmarks, audio, model score, credentials, or personal history. Real
-incident delivery is gated behind future live-detector integration. The real
-transport rejects simulated incidents at its network boundary.
-
-`telegram_accepted_no_acknowledgement` means Telegram accepted the message, not
-that a caregiver responded. `failed` means a known rejection or no worker
-submission. `uncertain` means receipt cannot be established, for example after a
-timeout. No automatic retries occur. Network requests run on a bounded worker
-with a five-second socket timeout. Shutdown waits only briefly; a stuck OS/DNS
-operation can outlive that wait in a daemon thread, so shutdown cannot guarantee
-delivery completion. A pending attempt at exit is reported as uncertain.
-
-## Checks and verification limits
-
-```bash
-python -m unittest discover -s tests -v
-python -m pip check
-```
-
-Tests use no camera, real microphone, real speaker playback, model downloads, or
-real notification services. They cover timing boundaries, deduplication,
-cancellation, rearming, camera/worker failure, missing pose, notification failure
-and uncertainty, secret-safe transport results, bounded asynchronous delivery,
-WAV decoding, rendering, and control routing. Optional image/audio decoding tests
-skip when NumPy/OpenCV are absent; the safety and headless tests need no extras.
-All 43 tests pass with UI/audio extras installed. In a fresh virtual environment
-without third-party packages, 41 pass and the two optional tests skip.
-
-Observed on the development computer: Python 3.14.10, NumPy 2.5.4, OpenCV
-4.14.0.94 (module version 4.14.0), sounddevice 0.5.6, cffi 2.1.1, and pycparser
-3.12 import successfully; `pip check` passes. The OpenCV window completes a
-simulated countdown and simulated accepted delivery. A console scenario keeps
-counting down through simulated camera loss and shows failed delivery. UI/audio
-package pins are in `requirements-device.txt`; these are not inference-stack
-pins or evidence of speaker compatibility. The desktop emitted a Wayland plugin
-warning but opened successfully through the available backend.
-
-Still unverified: recorded prompt playback on speakers, actual Telegram delivery
-and offline behavior, live camera and model integration, representative falls,
-normal activities, and physical camera disconnection. No detection accuracy or
-end-to-end real-device reliability claims are made.
-
-## Shared detector contract
-
-`src/fall_detection/contracts.py` remains contract version 1, unchanged by B's
-application work. Coordinate any interface changes before implementation.
-
-- `Detector`: `start()`, `set_paused(bool)`, `poll_event()`, `latest_preview()`,
-  `stop()`, and a `source` property. Operations are nonblocking and thread-safe.
-- `DetectionEvent`: unique event ID, monotonic timestamp, source, possible-fall
-  or fault kind, optional model score, and structured fault code.
-- `Preview`: timestamp, source, camera/pose status, model readiness, optional
-  score, optional BGR frame, landmarks, and optional fault code.
-- `BgrFrame`: immutable packed uint8 BGR bytes and dimensions. NumPy rendering:
-  `numpy.frombuffer(data, dtype=numpy.uint8).reshape(height, width, 3)`.
-- Landmarks use native MediaPipe indices and normalized image coordinates. A
-  owns conversion to the verified classifier feature layout.
-- Timestamps are `time.monotonic()` seconds in the same process. Preview
-  timestamp is frame timestamp. Never mix monotonic and wall-clock time.
-- Events are separate from replaceable previews. Overflow must be explicit;
-  preserve queued events and latch a fault instead of silently evicting them.
-- Pause/resume clears stale evidence, not application incidents. Camera failures
-  stay visible. Stop preserves queued events; start after stop begins a new session.
-
-A still needs to establish score meaning/range and readiness semantics against
-the actual checkpoint. B treats `None` as unknown and never uses the score as a
-calibrated confidence or as a countdown threshold.
-
-## Ownership and remaining integration
-
-A owns detection, preprocessing, model assets, and `tests/detection/`.
-B owns the application, fake detector, safety, audio, notifications, controls,
-shared setup, and documentation. A's files and the detector contract have not
-been changed by B's implementation.
-
-A's detection extras remain unverified and unpinned. Before combining environments,
-coordinate NumPy/OpenCV requirements and test MediaPipe/LiteRT imports; do not
-assume Python 3.14 supports the inference stack. Do not install detection extras
-to run this simulation. The verified preprocessing checkpoint must pass before
-B wires a real detector and real incident notification transport into the CLI.
-Use separate branches and working copies from the shared baseline.
+The shared detector contract remains version 1 in `src/fall_detection/contracts.py`. The worker owns camera capture and inference. The application loop reads the latest in-memory preview and a separate bounded event queue. Audio and notification workers keep the controls and countdown responsive.

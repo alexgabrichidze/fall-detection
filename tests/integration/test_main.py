@@ -41,13 +41,6 @@ class ApplicationTests(unittest.TestCase):
         self.assertEqual(consume_pending(detector, renderer), 32)
         self.assertEqual(consume_pending(detector, renderer), 8)
 
-    def test_live_request_fails_without_falling_back_to_simulation(self):
-        error = io.StringIO()
-        with contextlib.redirect_stderr(error), self.assertRaises(SystemExit) as result:
-            main(["--detector", "live"])
-        self.assertEqual(result.exception.code, 2)
-        self.assertIn("Live detection is not implemented", error.getvalue())
-
     def test_invalid_timing_is_rejected_before_the_application_starts(self):
         for arguments in [
             ["--duration", "nan"],
