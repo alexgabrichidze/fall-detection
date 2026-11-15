@@ -1,5 +1,7 @@
 # Safe&Sound
 
+Demo: https://youtu.be/wLLTdW43fl8
+
 Monitor one person with a webcam. A possible fall plays a spoken check-in, then starts a full 20-second response window after the warning finishes. Tap **I'm okay** on screen or say **“I'm okay”** out loud when voice cancellation is enabled. Safe&Sound calls out ten seconds remaining, confirms cancellation, and announces whether the alert was sent. If the countdown expires, the linked caregiver receives a short, silent clip when available. Detection and cancellation work offline after setup.
 
 ## Use Safe&Sound on a phone
