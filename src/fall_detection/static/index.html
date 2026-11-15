@@ -8,44 +8,66 @@
   <script src="/monitor.js" defer></script>
 </head>
 <body>
-  <header class="topbar">
-    <div class="shell topbar-content">
-      <div class="brand"><span class="brand-mark" aria-hidden="true"><i class="camera-icon"></i></span>Safe&amp;Sound</div>
-    </div>
-  </header>
-
-  <main class="shell monitor-shell">
+  <main class="shell" aria-label="Safe&amp;Sound">
     <p id="notice" class="notice" role="status" hidden></p>
 
     <div id="dashboard" class="dashboard">
-      <section class="card camera-card" aria-labelledby="camera-title">
-        <div class="card-heading">
-          <h1 id="camera-title">Camera</h1>
-          <div class="camera-actions">
-            <span id="camera-chip" class="chip" data-tone="neutral" hidden></span>
-            <button id="pause-camera" class="button quiet" type="button" aria-label="Pause monitoring" hidden>Pause</button>
-            <button id="stop-camera" class="button quiet" type="button" aria-label="Stop camera" hidden>Stop</button>
+      <section class="card camera-card" aria-label="Camera monitor">
+        <div class="card-heading camera-heading">
+        <div id="camera-input-controls" class="camera-input-controls" hidden>
+          <div class="camera-input-row">
+            <select id="camera-input" aria-label="Camera input" disabled>
+              <option value="">Loading cameras…</option>
+            </select>
+            <button id="refresh-cameras" class="button quiet" type="button">Refresh</button>
           </div>
         </div>
+          <div class="camera-toolbar">
+            <span id="camera-chip" class="chip" data-tone="neutral">Off</span>
+            <button id="voice-toggle" class="button outline" type="button" hidden>Enable voice</button>
+            <div class="camera-actions">
+        <button id="stop-camera" class="button outline" type="button" hidden>Stop camera</button>
+        <button id="camera-action" class="button primary" type="button" disabled>
+          <i id="camera-action-icon" class="play-icon" aria-hidden="true"></i><span id="camera-action-label">Start camera</span>
+        </button>
+            </div>
+          </div>
+        </div>
+        <div class="video-space" id="video-space">
         <div class="stage" id="stage">
           <img id="preview" alt="Local camera preview with pose landmarks" hidden>
-          <button id="camera-action" class="stage-action" type="button" aria-describedby="camera-detail" disabled>
-            <span class="stage-message">
-              <i class="camera-icon" aria-hidden="true"></i>
-              <strong id="camera-message">Start camera</strong>
-              <span id="camera-detail" hidden></span>
-            </span>
+          <button id="camera-placeholder" class="stage-message camera-start" type="button" aria-describedby="camera-detail">
+            <i class="camera-icon" aria-hidden="true"></i>
+            <strong id="camera-message">Camera is off</strong>
+            <span id="camera-detail">Start the camera to begin monitoring.</span>
           </button>
           <div class="frame-guides" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
         </div>
-        <dl class="camera-status">
-          <div><dt>Pose tracking</dt><dd id="pose-status">Waiting</dd></div>
-        </dl>
+        </div>
         <button id="simulate" class="button outline demo-button" type="button" hidden>Simulate a fall</button>
       </section>
 
       <div class="rail">
-        <section class="card incident-card" aria-labelledby="incident-title">
+        <section class="card activity-card" aria-labelledby="activity-title">
+          <div class="card-heading">
+            <h2 id="activity-title">Live activity</h2>
+            <div class="activity-heading-meta">
+              <span class="app-wordmark">Safe <span>&amp;</span> Sound</span>
+              <span id="activity-chip" class="chip" data-tone="neutral">Waiting</span>
+            </div>
+          </div>
+          <div class="activity-current">
+            <span>Current posture</span><strong id="activity-current" role="status">Unclear</strong>
+          </div>
+          <p id="activity-detail" class="activity-detail">Start the camera to see live activity.</p>
+          <div id="fall-score-row" class="activity-fall" data-tone="neutral">
+            <div class="activity-score-heading"><span>Possible fall <small>MODEL</small></span><strong id="fall-score-value">—</strong></div>
+            <div class="fall-track"><progress id="fall-score-bar" max="100" value="0" aria-label="Fall model score"></progress><i title="Model threshold: 90/100" aria-hidden="true"></i></div>
+          </div>
+          <ol id="activity-scores" class="activity-scores" aria-label="Ranked posture support scores"></ol>
+        </section>
+
+        <section id="incident-card" class="card incident-card" aria-labelledby="incident-title" hidden>
           <div class="card-heading"><h2 id="incident-title">Current incident</h2></div>
           <div id="incident-panel" class="incident-panel" data-tone="steady">
             <span class="incident-icon" aria-hidden="true"><i></i></span>
@@ -60,11 +82,7 @@
           </div>
           <button id="cancel" class="button primary full-width" type="button" hidden>I'm okay · Cancel alert</button>
           <button id="rearm" class="button outline full-width" type="button" hidden>Rearm monitoring</button>
-          <dl class="incident-status">
-            <div><dt>Response window</dt><dd id="window-length">20 seconds</dd></div>
-            <div><dt>Voice response</dt><dd><span id="voice-status" role="status">Disabled</span><button id="voice-toggle" class="text-button" type="button" hidden>Enable</button></dd></div>
-            <div><dt>Audio prompt</dt><dd id="audio-status">Ready</dd></div>
-          </dl>
+<p id="voice-status" class="voice-status" role="status" hidden></p>
         </section>
 
         <section class="card telegram-card" aria-labelledby="telegram-title">
@@ -81,9 +99,10 @@
           <p id="telegram-result" class="inline-result" role="status" hidden></p>
         </section>
       </div>
+
+
     </div>
 
-    <footer class="privacy"><i class="lock-icon" aria-hidden="true"></i>Detection runs on this device. A clip is sent to your linked Telegram chat when a fall alert goes out.</footer>
   </main>
 
   <dialog id="camera-dialog" aria-labelledby="camera-dialog-title">

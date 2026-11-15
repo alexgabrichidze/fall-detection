@@ -1,6 +1,7 @@
 import { PromptAudio } from './audio.js';
 import { RollingRecordings } from './recording.js';
 import { Telegram } from './telegram.js';
+import { ActivityTracker } from './activity.js';
 
 const COUNTDOWN = 20000;
 const ACCEPTED = 'telegram_accepted_no_acknowledgement';
@@ -28,9 +29,10 @@ export class BrowserMonitor {
   telegram = new Telegram();
   audio = new PromptAudio();
   recordings = new RollingRecordings();
+  activity = new ActivityTracker();
   view = {
     live: true, browser: true, countdown: 20, running: false, permissionPending: false,
-    camera: 'stopped', pose: 'unknown', modelReady: false, hasFrame: false,
+    cameraInput: null, camera: 'stopped', pose: 'unknown', modelReady: false, hasFrame: false,
     paused: false, fault: null, incident: 'monitoring', delivery: 'none', caregiver: null,
   };
 
@@ -47,11 +49,12 @@ export class BrowserMonitor {
 
   async request(path, body) {
     if (path === '/api/status') {
-      return { ...this.view, telegram: this.telegram.status,
+      return { ...this.view, activity: this.activity.snapshot(performance.now() / 1000), telegram: this.telegram.status,
         audio: this.audio.status, voice: this.voice?.status || 'Disabled',
         voiceEnabled: Boolean(this.voice?.enabled), listening: this.voice?.listening || false,
         remaining: this.view.incident === 'awaiting_response' ? Math.max(0, this.deadline - Date.now()) / 1000 : null };
     }
+    if (path === '/api/cameras') return this.cameraInputs();
     if (path.startsWith('/api/telegram/')) {
       const result = await this.telegram.action(path.split('/').at(-1));
       this.syncRecording();
@@ -66,6 +69,11 @@ export class BrowserMonitor {
       return {};
     }
     throw new Error('Unknown monitor action.');
+  }
+
+  async cameraInputs() {
+    const cameras = navigator.mediaDevices ? await cameraChoices(navigator.mediaDevices) : [];
+    return { cameras, selected: this.view.cameraInput };
   }
 
   async toggleVoice() {
@@ -132,6 +140,7 @@ export class BrowserMonitor {
     } finally {
       this.view.permissionPending = false;
     }
+    this.view.cameraInput = stream.getVideoTracks()[0].getSettings?.().deviceId || cameraId || null;
     this.view.running = true;
     this.view.hasFrame = true;
     stream.getVideoTracks()[0].addEventListener('ended', () => {
@@ -165,6 +174,7 @@ export class BrowserMonitor {
         try {
           const result = await this.detector.sample(this.video, time);
           if (this.stream !== stream) return;
+          if (!this.view.paused) this.activity.update(result.points, this.video.videoWidth, this.video.videoHeight, time / 1000, result.status, result.score);
           this.view.pose = result.status;
           this.view.modelReady = result.score !== null;
           if (result.fall && !this.view.paused && this.view.incident === 'monitoring') this.fall();
@@ -180,6 +190,7 @@ export class BrowserMonitor {
   }
 
   stop() {
+    this.activity.clear('off', 'Start the camera to see live activity.');
     this.recordings.stop();
     if (this.stream) this.stream.getTracks().forEach(track => track.stop());
     this.stream = this.video.srcObject = null;
@@ -207,6 +218,7 @@ export class BrowserMonitor {
     this.view.paused = !this.view.paused;
     this.view.hasFrame = !this.view.paused;
     this.detector.reset();
+    this.activity.clear(this.view.paused ? 'paused' : 'unknown', this.view.paused ? 'Resume monitoring to see live activity.' : 'Collecting fresh movement.');
     this.syncRecording();
   }
 

@@ -6,7 +6,7 @@ Monitor one person with a webcam. A possible fall starts a spoken check-in and a
 
 Open [Safe&Sound](https://safe-n-sound.netlify.app) in Safari on iPhone or Chrome on Android. Tap the camera preview and allow camera access. If multiple cameras are available, choose one when prompted. To install it, use **Share → Add to Home Screen** in Safari or the **Install app** option in Chrome's browser menu.
 
-The browser runs the fall model on that device. Keep the app open with the screen awake while monitoring. Once the camera is running, use **Enable** next to **Voice response** to download the offline speech model and grant microphone access. The hosted app uses Netlify Functions to deliver Telegram alerts and receive caregiver replies.
+The browser runs the fall model on that device. Keep the app open with the screen awake while monitoring. Once the camera is running, use **Enable voice** in the camera controls to download the offline speech model and grant microphone access. The hosted app uses Netlify Functions to deliver Telegram alerts and receive caregiver replies.
 
 ### Build and publish the browser version
 
@@ -55,6 +55,14 @@ The window shows camera, pose, classifier, audio, and delivery status. Missing o
 
 The voice prompts play locally through the speakers. Use `--prompt PATH` to replace the opening message with your own mono or stereo 16-bit PCM WAV up to 10 seconds long. Microphone capture is off unless you enable optional voice cancellation.
 
+## Live activity panel
+
+The browser monitor ranks **Standing**, **Walking**, **Sitting**, **Bending**, **Lying / horizontal**, and **Unclear / other** beside the video. The current posture and bars update from the latest local landmarks. No additional model download is required.
+
+Posture scores are independent support values from 0 to 100. They compare visible body angles, knee flexion, and recent alternating foot movement; they are not trained activity probabilities or accuracy percentages. Walking needs a short sequence of visible steps. A separate **Possible fall** bar shows the existing fall model's actual score, with its 90/100 model threshold marked. The other fall detection rules still apply.
+
+When knees or feet are cropped, the panel switches to **Upright**, **Leaning**, and **Horizontal torso**, using visible shoulders and hips. It does not guess standing, sitting, walking, or lying down from the upper body alone. Full-body labels return when usable leg geometry is visible; missing hips or ambiguous torso geometry shows **Unclear**. Ranked rows slide smoothly as support changes, with animation disabled when the system requests reduced motion. Missing tracking, pause, camera stop, faults, stale frames, and connection loss clear the displayed scores. The activity panel is display-only and does not change fall events, countdowns, cancellation, or notifications. On desktop, the video fills the main workspace while activity, incident, and Telegram cards form a compact right sidebar. The frame is fitted at its native aspect ratio without cropping or colored letterboxing. The incident card stays hidden during idle monitoring and appears for check-ins, cancellation, and alert results. On small screens, an active incident moves above the other panels.
+
 ## Optional offline voice cancellation
 
 Vosk recognizes **“I'm okay”** or **“I am okay”** locally. Install the voice extra and launch with `--voice`.
@@ -75,7 +83,7 @@ The [small English model](https://alphacephei.com/vosk/models) is Apache-2.0 lic
 
 The microphone opens after successful prompt playback and a 0.4-second echo guard, only while a response is pending. Listening pauses for the spoken countdown reminder and resumes after playback and the echo guard. Wait for **Microphone active** before saying “I'm okay,” then pause briefly so recognition can finish. The focused vocabulary includes negative phrases and unknown speech. Cancellation requires a complete matching phrase or repetitions of it, with mean word confidence of at least 0.65 and each word at least 0.45. Button and keyboard cancellation remain available.
 
-The **Voice response** row shows readiness, model loading, microphone activity, and failures. Input audio and recognized text remain in memory and are discarded. Listening stops on cancellation, countdown expiry, or exit. A failed prompt leaves voice capture off. A missing model or microphone failure leaves the countdown running. Simulation mode never opens the microphone.
+During a check-in, the voice status shows model loading, microphone activity, and failures. In the installable app, the camera controls show whether voice cancellation is enabled. Input audio and recognized text remain in memory and are discarded. Listening stops on cancellation, countdown expiry, or exit. A failed prompt leaves voice capture off. A missing model or microphone failure leaves the countdown running. Simulation mode never opens the microphone.
 
 Use the system microphone by default, or pass `--microphone N` with a sounddevice input index. List devices with `python -m sounddevice`. On macOS, allow microphone access for Terminal or the launching app in **Privacy & Security → Microphone**. The Python process opens the microphone.
 
