@@ -204,23 +204,25 @@ function showTokenForm() {
 }
 
 async function createPairing(token = '') {
+  const managed = state?.telegram?.managed;
   visible('token-form', false);
   visible('pairing', false);
   element('bot-token').value = '';
   feedback('link-status', 'Creating your Telegram link…');
   try {
-    const link = await request('/api/telegram/link', { token });
+    const link = await request('/api/telegram/link', managed ? {} : { token });
     const url = new URL(link.url);
     if (url.origin !== 'https://t.me') throw new Error('Telegram returned an invalid link.');
     element('telegram-link').href = url.href;
     text('pair-code', link.command);
+    visible('change-token', !managed);
     if (dialog.open) {
       visible('pairing', true);
       element('telegram-link').focus();
     }
     feedback('link-status', '');
   } catch (error) {
-    if (dialog.open) showTokenForm();
+    if (dialog.open && !managed) showTokenForm();
     feedback('link-status', error.message, true);
   }
 }
@@ -268,7 +270,7 @@ element('open-link').addEventListener('click', () => {
   if (!state?.telegram) return;
   feedback('link-status', '');
   dialog.showModal();
-  if (state.telegram.hasToken) createPairing();
+  if (state.telegram.managed || state.telegram.hasToken) createPairing();
   else showTokenForm();
 });
 element('close-link').addEventListener('click', () => dialog.close());
