@@ -1,8 +1,27 @@
-# Fall Detection Prototype
+# Safe&Sound
 
-Monitor one person with a webcam. A possible fall starts a spoken check-in and a 20-second response window. The app says “Ten seconds left” at the halfway point. Cancel locally or let the countdown expire to send one caregiver alert with a short, silent clip when available. The app says “Caregiver notified” when Telegram accepts the message. Detection and cancellation work offline after setup.
+Monitor one person with a webcam. A possible fall starts a spoken check-in and a 20-second response window. Tap **I'm okay** on screen or say **“I'm okay”** out loud when voice cancellation is enabled. Safe&Sound calls out ten seconds remaining, confirms cancellation, and announces whether the alert was sent. If the countdown expires, the linked caregiver receives a short, silent clip when available. Detection and cancellation work offline after setup.
 
-## Run in your browser
+## Use Safe&Sound on a phone
+
+Open [Safe&Sound](https://safe-n-sound.netlify.app) in Safari on iPhone or Chrome on Android. Tap the camera preview and allow camera access. If multiple cameras are available, choose one when prompted. To install it, use **Share → Add to Home Screen** in Safari or the **Install app** option in Chrome's browser menu.
+
+The browser runs the fall model on that device. Keep the app open with the screen awake while monitoring. Once the camera is running, use **Enable** next to **Voice response** to download the offline speech model and grant microphone access. The hosted app uses Netlify Functions to deliver Telegram alerts and receive caregiver replies.
+
+### Build and publish the browser version
+
+```bash
+npm ci --prefix web
+npm run --prefix web build
+```
+
+Deploy with the project's `netlify.toml` so Netlify publishes `web/dist` and `web/functions` together. In the site's production settings, add `TELEGRAM_BOT_TOKEN` as a secret and `TELEGRAM_BOT_USERNAME` as the bot username without the @. Include Functions if your plan offers scope selection. After deploying, register the HTTPS webhook with the same token in your local environment.
+
+```bash
+npm run --prefix web telegram:webhook -- https://your-site.netlify.app
+```
+
+## Run the desktop monitor in your browser
 
 Use Python 3.12 in a desktop session. The full project ZIP includes the fall model and the optional offline English speech model. For a Git checkout, download the fall model using the command in [models/README.md](models/README.md).
 
@@ -15,13 +34,9 @@ python -m pip install -e '.[detection,audio]'
 fall-detection --detector live --web
 ```
 
-Open `http://127.0.0.1:8765` and click **Start camera**. Use **Stop camera** to release it. Leave the Terminal process running while you monitor. `--port` selects a different local port. The browser receives previews from the app on this computer.
+Open `http://127.0.0.1:8765` and click the camera preview. Leave the Terminal process running while you monitor. `--port` selects a different local port. The browser receives previews from the app on this computer.
 
-Choose **Input camera** above the preview before starting. To change inputs,
-click **Stop camera**, choose another camera, then click **Start camera**.
-Use **Refresh** after connecting a new camera. Stopping or changing the camera
-does not cancel an active incident countdown. Camera selection lasts for the
-current session; `--camera N` still sets the initial input.
+If multiple cameras are available, pick one when prompted. Click **Stop** and then click the preview again to switch cameras. An active incident countdown continues while you change cameras.
 
 On the first Mac launch, allow camera access when macOS prompts. If access is off, enable it for the app you launched from (usually Terminal) in **System Settings → Privacy & Security → Camera**, then relaunch.
 
@@ -68,25 +83,15 @@ Automated checks cover response filtering, playback gating, microphone cleanup/f
 
 ## Send real Telegram alerts
 
-Click **Connect Telegram** → **Open Telegram**. Tap **Start** from the Telegram account that should receive alerts, then return to the monitor and click **Finish linking**. The link expires after 10 minutes. Use **Send test message** to verify delivery to that chat. The demo connects to @falldetectionsuperbot through a temporary relay on the host Mac. The Mac and tunnel need to stay online.
+Click **Connect Telegram** → **Open Telegram**. Tap **Start** from the Telegram account that should receive alerts, then return to the monitor and click **Finish linking**. The link expires after 10 minutes. Use **Send test message** to verify delivery to that chat. The hosted app uses the bot configured on Netlify.
 
 While monitoring with a linked chat, the app keeps a rolling camera buffer in memory. An alert that goes out after the countdown includes up to 10 seconds before detection and 3 seconds after. The clip has no microphone audio. Cancelling during the countdown discards the clip without uploading it. If no clip is available, the app sends the alert as text.
 
-The caregiver can tap **Help is on the way** to play a spoken acknowledgment at the monitor or **False alarm** to announce the decision and rearm it automatically. Replies apply to the active alert. The shared relay accepts the first reply within 30 minutes.
+The caregiver can tap **Help is on the way** to play a spoken acknowledgment at the monitor or **False alarm** to announce the decision and rearm it automatically. On the hosted app, the first reply within 30 minutes applies to the alert. Netlify forwards the clip in memory and stores temporary pairing, delivery, and reply records. Browsers that record WebM send the clip as a Telegram file.
 
-### Set up the shared bot once
+### Connect Telegram on a desktop install
 
-The owner runs the relay with the bot token on one computer. It reads `TELEGRAM_BOT_TOKEN` or the token in its existing private `.env.telegram.json` file. Run it from the project directory and put this relay behind an HTTPS proxy or tunnel.
-
-```bash
-python -m fall_detection.telegram_relay
-```
-
-The relay listens on `127.0.0.1:8767`. Restart it after updating the code so it can forward clips and receive caregiver replies. To point the browser monitor at another relay, set `FALL_MONITOR_RELAY_URL` to its public HTTPS address at launch. To share a preconfigured copy, put that address in `src/fall_detection/relay-url.txt` before sharing the source or building the package. Each installation pairs its own Telegram recipient. A temporary tunnel address lasts for the tunnel session.
-
-### Use your own bot
-
-To set up a private bot in the browser monitor, remove `src/fall_detection/relay-url.txt` and launch the monitor without setting `FALL_MONITOR_RELAY_URL`. **Connect Telegram** then accepts a token from BotFather and saves it in the private local file `.env.telegram.json`. The native window can reuse that pairing using `fall-detection --detector live --telegram`. To configure the native window from environment variables, follow these steps.
+The desktop monitor communicates directly with Telegram. **Connect Telegram** accepts a token from BotFather and saves it in the private local file `.env.telegram.json`. Use a dedicated desktop bot for local pairing and reply buttons. Telegram delivers the hosted bot's incoming updates to its Netlify webhook. A desktop with an already configured chat can still send directly through that bot. The native window can reuse a saved pairing with `fall-detection --detector live --telegram` or use environment variables.
 
 1. Create a dedicated bot with [BotFather](https://t.me/BotFather).
 2. Have the intended recipient open the bot's private chat and send it one message. Find the numeric `message.chat.id` using [getUpdates](https://core.telegram.org/bots/api#getupdates).

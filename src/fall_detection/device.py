@@ -173,7 +173,7 @@ def draw_pose(image, preview: Preview, cv) -> None:
 
 
 class OpenCVDevice:
-    title = "Fall detection prototype"
+    title = "Safe&Sound"
 
     def __init__(self, *, telegram_enabled: bool = False):
         if sys.platform.startswith("linux") and not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):

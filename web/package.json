@@ -1,0 +1,16 @@
+{
+  "name": "fall-monitor-pwa",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "telegram:webhook": "node configure-telegram.mjs"
+  },
+  "dependencies": {
+    "@litertjs/core": "2.6.0",
+    "@mediapipe/tasks-vision": "1.2.3",
+    "@netlify/blobs": "11.1.9",
+    "esbuild": "0.28.2",
+    "vosk-browser": "0.0.8"
+  }
+}
