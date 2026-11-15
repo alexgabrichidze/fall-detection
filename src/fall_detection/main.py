@@ -21,7 +21,15 @@ from .notifier import (
 )
 from .safety import EffectKind, SafetyController, SafetyState
 from .voice import DEFAULT_VOICE_MODEL, VoiceListener
-from .telegram_link import create_telegram_link, telegram_config
+from .telegram_link import TelegramLink, telegram_config
+
+
+DELIVERY_PROMPTS = {
+    DeliveryStatus.ACCEPTED: "caregiver-notified.wav",
+    DeliveryStatus.FAILED: "caregiver-alert-not-sent.wav",
+    DeliveryStatus.SIMULATED: "caregiver-alert-not-sent.wav",
+    DeliveryStatus.UNCERTAIN: "caregiver-alert-uncertain.wav",
+}
 
 
 def consume_pending(detector: Detector, renderer: ConsoleRenderer) -> int:
@@ -100,6 +108,7 @@ class Application:
             self._stop_response()
             if self._clips:
                 self._clips.discard()
+            self._pending_prompts.append((self.safety.incident.incident_id, PROMPTS / "alarm-cancelled.wav"))
 
     def _rearm(self):
         if not self.safety.reset():
@@ -199,10 +208,10 @@ class Application:
                 submitted = self.notifier.submit(effect.incident, frames) if frames else self.notifier.submit(effect.incident)
                 if not submitted:
                     self.safety.delivery_result(incident_id, DeliveryStatus.FAILED.value)
+                    self._pending_prompts.append((incident_id, PROMPTS / DELIVERY_PROMPTS[DeliveryStatus.FAILED]))
         result = self.notifier.poll()
         if result and self.safety.delivery_result(result.incident_id, result.status.value):
-            if result.status == DeliveryStatus.ACCEPTED:
-                self._pending_prompts.append((result.incident_id, PROMPTS / "caregiver-notified.wav"))
+            self._pending_prompts.append((result.incident_id, PROMPTS / DELIVERY_PROMPTS[result.status]))
             if result.status in (DeliveryStatus.ACCEPTED, DeliveryStatus.UNCERTAIN):
                 self.notifier.watch(result.incident_id)
         reply = self.notifier.poll_reply()
@@ -330,7 +339,7 @@ def main(argv: list[str] | None = None) -> int:
         else:
             timing = ScaffoldConfig(duration if duration is not None else max(1.0, args.event_after + 1), args.event_after)
             detector = FakeDetector()
-        telegram = create_telegram_link() if args.web and live else None
+        telegram = TelegramLink() if args.web and live else None
         receive = None
         clips_enabled = None
         if telegram:
@@ -347,7 +356,9 @@ def main(argv: list[str] | None = None) -> int:
         parser.error(str(error))
     prompt = args.prompt
     if prompt is None and (live or args.web):
-        prompt = PROMPTS / ("fall-warning-20.wav" if args.countdown == 20 else "fall-warning.wav")
+        voice_suffix = "-voice" if args.voice else ""
+        time_suffix = "-20" if args.countdown == 20 else ""
+        prompt = PROMPTS / f"fall-warning{voice_suffix}{time_suffix}.wav"
     renderer = None
     app = None
     try:
@@ -374,7 +385,7 @@ def main(argv: list[str] | None = None) -> int:
             except OSError:
                 print(f"Could not open port {args.port}. Choose another port with --port.", file=sys.stderr)
                 return 2
-            print(f"Open Fall Monitor at {renderer.url}", flush=True)
+            print(f"Open Safe&Sound at {renderer.url}", flush=True)
         else:
             try:
                 renderer = OpenCVDevice(telegram_enabled=args.telegram) if use_ui else ConsoleRenderer(sys.stdout)

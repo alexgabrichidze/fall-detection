@@ -145,24 +145,25 @@ class TelegramSender:
         # Enforce separation at the network boundary, regardless of CLI options.
         if incident.source != DetectionSource.LIVE:
             return DeliveryResult(incident.incident_id, DeliveryStatus.FAILED)
-        return DeliveryResult(incident.incident_id, self.send_alert(incident.incident_id, clip, replies=self._replies))
+        return DeliveryResult(incident.incident_id, self.send_alert(incident.incident_id, clip))
 
-    def send_alert(self, incident_id: str, clip: bytes | None = None, *, replies: bool = False) -> DeliveryStatus:
+    def send_alert(self, incident_id: str, clip: bytes | None = None) -> DeliveryStatus:
         text = (
-            "EXPERIMENTAL FALL DETECTION: possible fall; response countdown expired. "
+            "Safe&Sound detected a possible fall. The response countdown expired. "
             "Please check on the person. "
             f"Incident: {incident_id}. No caregiver response has been confirmed."
         )
         fields: dict = {"chat_id": self._config.chat_id}
-        if replies and not self._config.chat_id.startswith("-"):
-            if self._replies and not self._subscribed:
-                try:
-                    telegram_request(self._config.token, "getUpdates", {
-                        "limit": 1, "timeout": 0, "allowed_updates": ["message", "callback_query"],
-                    })
-                    self._subscribed = True
-                except ValueError:
-                    pass
+        if self._replies and not self._subscribed and not self._config.chat_id.startswith("-"):
+            try:
+                telegram_request(self._config.token, "getUpdates", {
+                    "limit": 1, "timeout": 0, "allowed_updates": ["message", "callback_query"],
+                })
+                self._subscribed = True
+            except ValueError:
+                # The bot can still send alerts when a webhook receives its updates.
+                pass
+        if self._subscribed:
             fields["reply_markup"] = {"inline_keyboard": [[
                 {"text": "Help is on the way", "callback_data": f"fall:help:{incident_id}"},
                 {"text": "False alarm", "callback_data": f"fall:false_alarm:{incident_id}"},
@@ -174,7 +175,7 @@ class TelegramSender:
         return self._post("sendMessage", {**fields, "text": text})
 
     def poll_reply(self, incident_id: str) -> CaregiverAction | None:
-        if not self._replies or self._config.chat_id.startswith("-"):
+        if not self._subscribed:
             return None
         token = self._config.token
         updates = telegram_request(token, "getUpdates", {
@@ -194,7 +195,7 @@ class TelegramSender:
     def send_test(self) -> DeliveryStatus:
         """Only called by an explicit standalone test command, never by simulations."""
         return self._post("sendMessage", {
-            "chat_id": self._config.chat_id, "text": "TEST ONLY: fall detection Telegram setup check. No fall detected.",
+            "chat_id": self._config.chat_id, "text": "TEST ONLY: Safe&Sound Telegram setup check. No fall detected.",
         })
 
     def _post(self, method: str, fields: dict, clip: bytes | None = None) -> DeliveryStatus:
