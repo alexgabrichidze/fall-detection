@@ -1,6 +1,6 @@
 # Fall Detection Prototype
 
-Monitor one person with a webcam. A possible fall starts an “Are you okay?” prompt and a 20-second response window. Cancel locally or let the countdown expire to attempt one caregiver alert. Video and pose landmarks stay in memory on the device. Detection and cancellation work offline after setup.
+Monitor one person with a webcam. A possible fall starts a spoken check-in and a 20-second response window. The app says “Ten seconds left” at the halfway point. Cancel locally or let the countdown expire to attempt one caregiver alert. The app says “Caregiver notified” when Telegram accepts the message. Video and pose landmarks stay in memory on the device. Detection and cancellation work offline after setup.
 
 ## Run in your browser
 
@@ -32,13 +32,25 @@ On Windows, create the environment with `py -3.12 -m venv .venv` and activate it
 
 The window shows camera, pose, classifier, audio, and delivery status. Missing or unreliable tracking clears the movement window and displays an unknown score. If the camera fails, restart the app to reopen it. The app keeps an active countdown running through camera loss or a failed prompt.
 
-The bundled prompt is a local 16-bit PCM WAV. Use `--prompt PATH` for your own mono or stereo WAV up to 10 seconds. The app uses speaker output only.
+The voice prompts play locally through the speakers. Use `--prompt PATH` to replace the opening message with your own mono or stereo 16-bit PCM WAV up to 10 seconds long.
 
 ## Send real Telegram alerts
 
-In the browser, click **Connect Telegram** and use the saved bot or enter a token from BotFather. Follow **Open Telegram**, tap **Start** from the chat that should receive alerts, then return to the monitor and click **Finish linking**. Click **Send test message** to verify delivery. The link expires after 10 minutes. The app saves the bot credential and paired recipient in a private local settings file, `.env.telegram.json`, in the project directory.
+Click **Connect Telegram** → **Open Telegram**. Tap **Start** from the Telegram account that should receive alerts, then return to the monitor and click **Finish linking**. The link expires after 10 minutes. Use **Send test message** to verify delivery to that chat. The demo connects to @falldetectionsuperbot through a temporary relay on the host Mac. The Mac and tunnel need to stay online.
 
-The native window can reuse the linked chat with `fall-detection --detector live --telegram`. To configure the native window from environment variables instead, follow these steps.
+### Set up the shared bot once
+
+The owner runs the relay with the bot token on one computer. It reads `TELEGRAM_BOT_TOKEN` or the token in its existing private `.env.telegram.json` file. Run it from the project directory and put this relay behind an HTTPS proxy or tunnel.
+
+```bash
+python -m fall_detection.telegram_relay
+```
+
+The relay listens on `127.0.0.1:8767`. To point the browser monitor at another relay, set `FALL_MONITOR_RELAY_URL` to its public HTTPS address at launch. To share a preconfigured copy, put that address in `src/fall_detection/relay-url.txt` before sharing the source or building the package. Each installation pairs its own Telegram recipient. A temporary tunnel address lasts for the tunnel session.
+
+### Use your own bot
+
+To set up a private bot in the browser monitor, remove `src/fall_detection/relay-url.txt` and launch the monitor without setting `FALL_MONITOR_RELAY_URL`. **Connect Telegram** then accepts a token from BotFather and saves it in the private local file `.env.telegram.json`. The native window can reuse that pairing using `fall-detection --detector live --telegram`. To configure the native window from environment variables, follow these steps.
 
 1. Create a dedicated bot with [BotFather](https://t.me/BotFather).
 2. Have the intended recipient open the bot's private chat and send it one message. Find the numeric `message.chat.id` using [getUpdates](https://core.telegram.org/bots/api#getupdates).
