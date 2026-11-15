@@ -4,11 +4,20 @@ from dataclasses import dataclass
 import json
 from math import isfinite
 from pathlib import Path
+import re
 from queue import Empty, Full, Queue
 from threading import Event, Lock, Thread
 from time import monotonic
 
 DEFAULT_VOICE_MODEL = Path("models/vosk-model-small-en-us-0.15")
+# Keep negative responses and unknown speech in the grammar so the recognizer
+# can reject them instead of forcing every utterance into a positive phrase.
+RESPONSE_GRAMMAR = (
+    "i'm okay", "i am okay", "i'm not okay", "i am not okay",
+    "help", "i need help", "are you okay", "ten seconds left", "[unk]",
+)
+_RESPONSE = r"(?:i'm|i am) (?:okay|ok)"
+
 
 
 def is_cancellation(result: str) -> bool:
@@ -17,7 +26,7 @@ def is_cancellation(result: str) -> bool:
         decoded = json.loads(result)
         text = decoded["text"].lower().replace("’", "'")
         words = decoded["result"]
-        if text not in ("i'm okay", "i am okay", "i'm ok", "i am ok"):
+        if not re.fullmatch(rf"{_RESPONSE}(?: {_RESPONSE})*", text):
             return False
         if " ".join(word["word"] for word in words) != text:
             return False
@@ -119,15 +128,17 @@ class VoiceListener:
             except Full:
                 failed.set()
 
-        rate = int(sd.query_devices(self._device, "input")["default_samplerate"])
-        recognizer = KaldiRecognizer(model, rate)
+        device_info = sd.query_devices(self._device, "input")
+        rate = int(device_info["default_samplerate"])
+        recognizer = KaldiRecognizer(model, rate, json.dumps(RESPONSE_GRAMMAR))
         recognizer.SetWords(True)
         if cancelled.is_set() or self._stop.is_set() or monotonic() >= deadline:
             return False
-        # Free recognition avoids forcing unrelated speech into an acceptance grammar.
+        # Only complete results pass the strict phrase and confidence filter.
         with sd.RawInputStream(device=self._device, samplerate=rate, channels=1,
                                dtype="int16", blocksize=max(1, rate // 10), callback=callback):
-            self._update(request, "listening: say I'm okay", True)
+            input_name = device_info.get("name", "system default")
+            self._update(request, f"listening ({input_name}): say I'm okay", True)
             while not cancelled.is_set() and not self._stop.is_set() and monotonic() < deadline:
                 if failed.is_set():
                     raise RuntimeError("microphone input interrupted")

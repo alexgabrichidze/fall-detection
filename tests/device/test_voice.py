@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
-from fall_detection.voice import VoiceListener, is_cancellation
+from fall_detection.voice import RESPONSE_GRAMMAR, VoiceListener, is_cancellation
 
 
 def response(text, confidence=0.95):
@@ -17,10 +17,10 @@ def response(text, confidence=0.95):
 
 class VoiceTests(unittest.TestCase):
     def test_only_complete_confident_positive_responses_cancel(self):
-        for text in ("i'm okay", "i am okay", "i'm ok", "i am ok"):
+        for text in ("i'm okay", "i am okay", "i'm ok", "i am ok", "i am okay i am okay", "i'm okay i am okay"):
             self.assertTrue(is_cancellation(response(text)))
         for text in ("okay", "not okay", "i am not okay", "are you okay", "i need help",
-                     "i'm okay but help", "", "i am"):
+                     "i'm okay but help", "i am okay i am not okay", "[unk] i am okay", "i am okay help", "", "i am"):
             self.assertFalse(is_cancellation(response(text)))
         for value in (response("i'm okay", 0.79), response("i'm okay", float('nan')),
                       '{"partial":"i am okay"}', '{"text":"i am okay"}',
@@ -76,7 +76,8 @@ class VoiceTests(unittest.TestCase):
                     self.assertEqual(result.incident_id, 'incident-1')
                     self.assertTrue(exited.is_set())
                     recognizer.SetWords.assert_called_once_with(True)
-                    vosk.KaldiRecognizer.assert_called_once_with(vosk.Model.return_value, 48000)
+                    vosk.KaldiRecognizer.assert_called_once_with(
+                        vosk.Model.return_value, 48000, json.dumps(RESPONSE_GRAMMAR))
                 if missing:
                     sd.RawInputStream.assert_not_called()
                 if input_error:
