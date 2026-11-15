@@ -1,4 +1,4 @@
-"""Shared Telegram pairing and text delivery. Run behind an HTTPS proxy."""
+"""Shared Telegram pairing, alert delivery, and replies. Run behind HTTPS."""
 
 import argparse
 from dataclasses import dataclass, field
@@ -12,8 +12,12 @@ from threading import Lock
 from time import monotonic
 from uuid import UUID
 
-from .notifier import DeliveryStatus, TelegramConfig, TelegramSender
-from .telegram_link import OWNER_SETTINGS, read_settings, telegram_request
+from .clips import MAX_CLIP_BYTES
+from .notifier import (
+    CaregiverAction, DeliveryStatus, TelegramConfig, TelegramSender, answer_caregiver,
+    get_caregiver_callback, telegram_request,
+)
+from .telegram_link import OWNER_SETTINGS, read_settings
 
 
 @dataclass
@@ -21,6 +25,13 @@ class Pairing:
     code: str
     expires: float
     chats: dict[int, str] = field(default_factory=dict)
+
+
+@dataclass
+class PendingAlert:
+    expires: float
+    action: CaregiverAction | None = None
+    status: DeliveryStatus = DeliveryStatus.UNCERTAIN
 
 
 class TelegramRelay:
@@ -36,6 +47,7 @@ class TelegramRelay:
         if isinstance(webhook, dict) and webhook.get("url"):
             raise ValueError("This bot already has a webhook receiving Telegram updates.")
         self._tickets: dict[str, Pairing] = {}
+        self._alerts: dict[tuple[str, str], PendingAlert] = {}
         self._last_send: dict[str, float] = {}
         self._lock = Lock()
         self._poll_lock = Lock()
@@ -74,6 +86,7 @@ class TelegramRelay:
     def _poll(self):
         if not self._poll_lock.acquire(blocking=False):
             raise ValueError("The bot is checking for new chats. Try again in a moment.")
+        answers = []
         try:
             now = monotonic()
             if now < self._next_poll:
@@ -82,7 +95,7 @@ class TelegramRelay:
             # Telegram keeps updates for up to 24 hours. An old offset can be retired.
             offset = self._offset if now - self._offset_time < 86400 else 0
             updates = telegram_request(self._token, "getUpdates", {
-                "offset": offset, "timeout": 0, "allowed_updates": ["message"],
+                "offset": offset, "timeout": 0, "allowed_updates": ["message", "callback_query"],
             })
             if not isinstance(updates, list):
                 raise ValueError("Telegram returned an unexpected response.")
@@ -98,31 +111,86 @@ class TelegramRelay:
                     if pair and chat.get("type") == "private" and type(chat.get("id")) is int:
                         name = " ".join(chat.get(key, "") for key in ("first_name", "last_name")).strip()
                         pair.chats[chat["id"]] = name or "Private chat"
+                    callback = get_caregiver_callback(update)
+                    if callback:
+                        alert = self._alerts.get((callback.chat_id, callback.reply.incident_id))
+                        accepted = alert is not None and alert.expires > now and alert.action is None
+                        if accepted:
+                            alert.action = callback.reply.action
+                        answers.append((callback, accepted))
         finally:
             self._poll_lock.release()
+        for callback, accepted in answers:
+            answer_caregiver(self._token, callback, accepted=accepted)
 
     def _grant(self, chat_id: str) -> str:
         return f"{chat_id}.{hmac.digest(self._key, chat_id.encode(), 'sha256').hex()}"
 
-    def notify(self, body: dict) -> DeliveryStatus:
-        grant, kind = body.get("grant"), body.get("kind")
+    def authorized_chat(self, grant: str | None) -> str | None:
         if not isinstance(grant, str) or not re.fullmatch(r"[0-9]{1,20}\.[0-9a-f]{64}", grant):
-            return DeliveryStatus.FAILED
+            return None
         chat_id = grant.partition(".")[0]
-        if not hmac.compare_digest(grant, self._grant(chat_id)):
+        return chat_id if hmac.compare_digest(grant, self._grant(chat_id)) else None
+
+    def notify(self, body: dict) -> DeliveryStatus:
+        chat_id, kind = self.authorized_chat(body.get("grant")), body.get("kind")
+        if not chat_id:
             return DeliveryStatus.FAILED
         if kind == "fall" and isinstance(body.get("incident_id"), str):
-            incident_id = str(UUID(body["incident_id"]))
-        elif kind != "test":
+            return self.alert(chat_id, body["incident_id"], replies=body.get("replies") is True)
+        if kind != "test":
             return DeliveryStatus.FAILED
-        now = monotonic()
         with self._lock:
-            self._last_send = {chat: due for chat, due in self._last_send.items() if due > now}
-            if chat_id in self._last_send:
+            limited = self._rate_limited(chat_id, monotonic())
+        return DeliveryStatus.FAILED if limited else self._sender(chat_id).send_test()
+
+    def _rate_limited(self, chat_id: str, now: float) -> bool:
+        self._last_send = {chat: due for chat, due in self._last_send.items() if due > now}
+        if chat_id in self._last_send:
+            return True
+        self._last_send[chat_id] = now + 5
+        return False
+
+    def _sender(self, chat_id: str) -> TelegramSender:
+        return TelegramSender(TelegramConfig(self._token, chat_id))
+
+    def alert(self, chat_id: str, incident_id: str, clip: bytes | None = None, *, replies: bool) -> DeliveryStatus:
+        incident_id = str(UUID(incident_id))
+        key = chat_id, incident_id
+        now = monotonic()
+        alert = None
+        with self._lock:
+            existing = self._alerts.get(key)
+            if existing and existing.expires > now:
+                return existing.status
+            if self._rate_limited(chat_id, now):
                 return DeliveryStatus.FAILED
-            self._last_send[chat_id] = now + 5
-        sender = TelegramSender(TelegramConfig(self._token, chat_id))
-        return sender.send_test() if kind == "test" else sender.send_alert(incident_id)
+            if replies:
+                self._alerts = {key: alert for key, alert in self._alerts.items() if alert.expires > now}
+                if len(self._alerts) >= 256:
+                    self._alerts.pop(next(iter(self._alerts)))
+                alert = PendingAlert(now + 30 * 60)
+                self._alerts[key] = alert
+        status = self._sender(chat_id).send_alert(incident_id, clip, replies=replies)
+        if alert:
+            with self._lock:
+                alert.status = status
+        return status
+
+    def response(self, body: dict) -> dict:
+        chat_id = self.authorized_chat(body.get("grant"))
+        incident_id = body.get("incident_id")
+        if not chat_id or not isinstance(incident_id, str):
+            raise ValueError("Invalid caregiver response request.")
+        with self._lock:
+            alert = self._alerts.get((chat_id, incident_id))
+            if not alert or alert.expires <= monotonic() or alert.status == DeliveryStatus.FAILED:
+                return {"action": None}
+            if alert.action is not None:
+                return {"action": alert.action.value}
+        self._poll()
+        with self._lock:
+            return {"action": alert.action.value if alert.action else None}
 
 
 class RelayHandler(BaseHTTPRequestHandler):
@@ -138,19 +206,24 @@ class RelayHandler(BaseHTTPRequestHandler):
         status = 200
         try:
             size = int(self.headers.get("Content-Length", "0"))
-            if not 0 < size <= 2048 or self.headers.get_content_type() != "application/json":
-                raise ValueError("Invalid relay request.")
-            body = json.loads(self.rfile.read(size))
-            if not isinstance(body, dict):
-                raise ValueError("Invalid relay request.")
-            if self.path == "/link":
-                result = relay.begin()
-            elif self.path == "/finish" and isinstance(body.get("ticket"), str):
-                result = relay.finish(body["ticket"])
-            elif self.path == "/notify":
-                result = {"status": relay.notify(body).value}
+            if self.path == "/notify" and self.headers.get_content_type() == "video/mp4":
+                result = self._video(size)
             else:
-                status, result = 404, {"error": "Unknown relay request."}
+                if not 0 < size <= 2048 or self.headers.get_content_type() != "application/json":
+                    raise ValueError("Invalid relay request.")
+                body = json.loads(self.rfile.read(size))
+                if not isinstance(body, dict):
+                    raise ValueError("Invalid relay request.")
+                if self.path == "/link":
+                    result = relay.begin()
+                elif self.path == "/finish" and isinstance(body.get("ticket"), str):
+                    result = relay.finish(body["ticket"])
+                elif self.path == "/notify":
+                    result = {"status": relay.notify(body).value}
+                elif self.path == "/response":
+                    result = relay.response(body)
+                else:
+                    status, result = 404, {"error": "Unknown relay request."}
         except ValueError as error:
             status, result = 400, {"error": str(error)}
         except OSError:
@@ -166,6 +239,21 @@ class RelayHandler(BaseHTTPRequestHandler):
         except OSError:
             pass
 
+    def _video(self, size: int) -> dict:
+        relay = self.server.relay
+        auth = self.headers.get("Authorization", "")
+        incident_id = self.headers.get("X-Incident-ID", "")
+        chat_id = relay.authorized_chat(auth.removeprefix("Bearer ")) if auth.startswith("Bearer ") else None
+        if not chat_id:
+            return {"status": DeliveryStatus.FAILED.value}
+        if not 8 <= size <= MAX_CLIP_BYTES:
+            raise ValueError("Invalid relay request.")
+        incident_id = str(UUID(incident_id))
+        clip = self.rfile.read(size)
+        if len(clip) != size or clip[4:8] != b"ftyp":
+            raise ValueError("Invalid relay request.")
+        return {"status": relay.alert(chat_id, incident_id, clip, replies=True).value}
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -174,6 +262,7 @@ def main():
     try:
         token = os.environ.get("TELEGRAM_BOT_TOKEN") or read_settings(OWNER_SETTINGS).get("token", "")
         relay = TelegramRelay(token)
+        relay._poll()
         server = ThreadingHTTPServer(("127.0.0.1", args.port), RelayHandler)
     except (OSError, ValueError, OverflowError) as error:
         parser.error(str(error))
