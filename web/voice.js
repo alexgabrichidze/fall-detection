@@ -21,13 +21,14 @@ export class Voice {
   generation = 0;
 
   async enable(context) {
+    if (!context) throw new Error('Browser audio is unavailable.');
     const access = await navigator.mediaDevices.getUserMedia({ audio: true });
     access.getTracks().forEach(track => track.stop());
-    this.enabled = true;
     this.context = context;
     this.status = 'Loading local voice model';
     try {
       this.model ??= await createModel('/models/voice.tar.gz', -1);
+      this.enabled = true;
       this.status = 'Ready';
     } catch {
       this.enabled = false;
