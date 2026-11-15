@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fall Monitor</title>
+  <link rel="stylesheet" href="/monitor.css">
+  <script src="/monitor.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="shell topbar-content">
+      <div class="brand"><span class="brand-mark" aria-hidden="true"><i class="camera-icon"></i></span>Fall Monitor</div>
+      <div id="session" class="session" data-tone="steady"><span></span><span id="session-label">Local session</span></div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <div class="page-heading">
+      <div>
+        <h1>Camera monitor</h1>
+        <p>See the camera and respond to possible falls.</p>
+      </div>
+      <div class="camera-actions">
+        <button id="stop-camera" class="button outline" type="button" hidden>Stop camera</button>
+        <button id="camera-action" class="button primary" type="button" disabled>
+          <i id="camera-action-icon" class="play-icon" aria-hidden="true"></i><span id="camera-action-label">Start camera</span>
+        </button>
+      </div>
+    </div>
+    <p id="notice" class="notice" role="status" hidden></p>
+
+    <div id="dashboard" class="dashboard">
+      <section class="card camera-card" aria-labelledby="camera-title">
+        <div class="card-heading">
+          <h2 id="camera-title"><i class="camera-icon" aria-hidden="true"></i>Camera preview</h2>
+          <span id="camera-chip" class="chip" data-tone="neutral">Off</span>
+        </div>
+        <div class="stage" id="stage">
+          <img id="preview" alt="Local camera preview with pose landmarks" hidden>
+          <div id="camera-placeholder" class="stage-message">
+            <i class="camera-icon" aria-hidden="true"></i>
+            <strong id="camera-message">Camera is off</strong>
+            <span id="camera-detail">Start the camera to begin monitoring.</span>
+          </div>
+          <div class="frame-guides" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        </div>
+        <dl class="camera-status">
+          <div><dt>Camera</dt><dd id="camera-status">Off</dd></div>
+          <div><dt>Pose tracking</dt><dd id="pose-status">Waiting</dd></div>
+        </dl>
+        <button id="simulate" class="button outline demo-button" type="button" hidden>Simulate a fall</button>
+      </section>
+
+      <div class="rail">
+        <section class="card incident-card" aria-labelledby="incident-title">
+          <div class="card-heading"><h2 id="incident-title">Current incident</h2></div>
+          <div id="incident-panel" class="incident-panel" data-tone="steady">
+            <span class="incident-icon" aria-hidden="true"><i></i></span>
+            <div>
+              <strong id="incident-status" role="status">Ready to monitor</strong>
+              <p id="incident-detail">The response countdown will appear here.</p>
+            </div>
+          </div>
+          <div id="countdown-panel" class="countdown" hidden>
+            <span id="time-remaining" role="timer">20</span><span>seconds left</span>
+            <progress id="time-progress" aria-label="Time left to cancel" max="20" value="20"></progress>
+          </div>
+          <button id="cancel" class="button primary full-width" type="button" hidden>I'm okay · Cancel alert</button>
+          <button id="rearm" class="button outline full-width" type="button" hidden>Rearm monitoring</button>
+          <dl class="incident-status">
+            <div><dt>Response window</dt><dd id="window-length">20 seconds</dd></div>
+            <div><dt>Audio prompt</dt><dd id="audio-status">Ready</dd></div>
+          </dl>
+        </section>
+
+        <section class="card telegram-card" aria-labelledby="telegram-title">
+          <div class="card-heading">
+            <h2 id="telegram-title"><i class="plane-icon" aria-hidden="true"></i>Telegram alerts</h2>
+            <span id="telegram-chip" class="chip" data-tone="neutral">Not linked</span>
+          </div>
+          <p id="telegram-description">Link one chat to receive alerts when the countdown expires.</p>
+          <button id="open-link" class="button outline full-width" type="button" disabled>Connect Telegram</button>
+          <div id="telegram-actions" class="telegram-actions" hidden>
+            <button id="send-test" class="button outline" type="button">Send test message</button>
+            <button id="disconnect" class="button quiet" type="button">Disconnect</button>
+          </div>
+          <p id="telegram-result" class="inline-result" role="status" hidden></p>
+        </section>
+      </div>
+    </div>
+
+    <footer class="privacy"><i class="lock-icon" aria-hidden="true"></i>Camera frames are processed on this device.</footer>
+  </main>
+
+  <dialog id="link-dialog" aria-labelledby="link-title">
+    <div class="dialog-heading">
+      <h2 id="link-title">Connect Telegram</h2>
+      <button id="close-link" class="icon-button" type="button" aria-label="Close Telegram setup">×</button>
+    </div>
+    <form id="token-form">
+      <p>Enter your bot token from BotFather to create a link for the recipient.</p>
+      <label for="bot-token">Bot token</label>
+      <input id="bot-token" type="password" autocomplete="off" spellcheck="false" required>
+      <button id="create-link" class="button primary full-width" type="submit">Create Telegram link</button>
+    </form>
+    <div id="pairing" hidden>
+      <p>Open the bot in Telegram and tap <b>Start</b>. Come back here to finish linking.</p>
+      <div class="pair-actions">
+        <a id="telegram-link" class="button outline" target="_blank" rel="noopener noreferrer">Open Telegram ↗</a>
+        <button id="finish-link" class="button primary" type="button">Finish linking</button>
+      </div>
+      <details><summary>Enter the pairing code manually</summary><code id="pair-code"></code></details>
+      <button id="change-token" class="button quiet" type="button">Use a different bot</button>
+    </div>
+    <p id="link-status" class="inline-result" role="status" hidden></p>
+  </dialog>
+</body>
+</html>
