@@ -40,6 +40,14 @@ The window shows camera, pose, classifier, audio, and delivery status. Missing o
 
 The voice prompts play locally through the speakers. Use `--prompt PATH` to replace the opening message with your own mono or stereo 16-bit PCM WAV up to 10 seconds long. Microphone capture is off unless you enable optional voice cancellation.
 
+## Live activity panel
+
+The browser monitor ranks **Standing**, **Walking**, **Sitting**, **Bending**, **Lying / horizontal**, and **Unclear / other** beside the video. The current posture and bars update from the latest local landmarks. No additional model download is required.
+
+Posture scores are independent support values from 0 to 100. They compare visible body angles, knee flexion, and recent alternating foot movement; they are not trained activity probabilities or accuracy percentages. Walking needs a short sequence of visible steps. A separate **Possible fall** bar shows the existing fall model's actual score, with its 90/100 model threshold marked. The other fall detection rules still apply.
+
+When knees or feet are cropped, the panel switches to **Upright**, **Leaning**, and **Horizontal torso**, using visible shoulders and hips. It does not guess standing, sitting, walking, or lying down from the upper body alone. Full-body labels return when usable leg geometry is visible; missing hips or ambiguous torso geometry shows **Unclear**. Ranked rows slide smoothly as support changes, with animation disabled when the system requests reduced motion. Missing tracking, pause, camera stop, faults, stale frames, and connection loss clear the displayed scores. The activity panel is display-only and does not change fall events, countdowns, cancellation, or notifications. On desktop, the video fills the main workspace while activity, incident, and Telegram cards form a compact right sidebar. The frame is fitted at its native aspect ratio without cropping or colored letterboxing. The incident card stays hidden during idle monitoring and appears for check-ins, cancellation, and alert results. On small screens, an active incident moves above the other panels.
+
 ## Optional offline voice cancellation
 
 Vosk recognizes **“I'm okay”** or **“I am okay”** locally. Enable it explicitly:

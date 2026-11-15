@@ -6,8 +6,10 @@ import json
 from pathlib import Path
 from queue import Empty, Full, Queue
 from threading import Lock, Thread
+from time import monotonic
 
 from .device import Command, View, draw_pose
+from .activity import ActivityTracker
 from .camera_inputs import list_camera_inputs
 from .notifier import DeliveryStatus
 from .telegram_link import RelayTelegramLink, TelegramLink
@@ -32,6 +34,9 @@ class WebDevice:
         self._camera_index = camera_index or (lambda: 0)
         self._select_camera = select_camera
         self._view: View | None = None
+        self._state_lock = Lock()
+        self._activity_tracker = ActivityTracker()
+        self._activity = self._activity_tracker.clear(0, "off", "Start the camera to see live activity.")
         self._commands: Queue[Command] = Queue(maxsize=16)
         self._frame_lock = Lock()
         self._encoded_timestamp: float | None = None
@@ -44,7 +49,11 @@ class WebDevice:
         self._thread.start()
 
     def render(self, view: View) -> None:
-        self._view = view
+        report = self._activity_tracker.update(view.preview, running=view.running,
+                                               paused=view.paused, fault=view.detector_error)
+        with self._state_lock:
+            self._view = view
+            self._activity = report
 
     def enqueue(self, command: Command) -> None:
         try:
@@ -62,7 +71,10 @@ class WebDevice:
         return tuple(commands)
 
     def status(self) -> dict:
-        view = self._view
+        with self._state_lock:
+            view = self._view
+            activity = self._activity
+
         return {
             "live": self.live,
             "running": view.running if view else False,
@@ -72,6 +84,7 @@ class WebDevice:
             "camera": view.preview.camera_status.value if view else "stopped",
             "pose": view.preview.pose_status.value if view else "unknown",
             "modelReady": view.preview.model_ready if view else False,
+            "activity": activity.payload(monotonic()),
             "hasFrame": bool(view and view.preview.frame and not view.detector_error),
             "paused": view.paused if view else False,
             "fault": view.detector_error if view else None,

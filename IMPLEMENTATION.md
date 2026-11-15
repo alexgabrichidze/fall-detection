@@ -200,3 +200,20 @@ threshold. Setup and launch flags are documented in README.md.
 - [x] List unresolved model limitations and the scope of completed testing.
 - [x] Provide launch commands for live mode, Telegram alerts, and simulation.
 - [ ] Verify the instructions from a fresh environment on the development computer.
+
+
+## 15. Add live activity feedback (display only)
+
+- [x] Add a local landmark-based posture estimator for standing, sitting, bending, horizontal posture, and walking evidence.
+- [x] Show ranked support bars and the current posture beside the browser camera preview.
+- [x] Estimate upper-body orientation when knees or feet are cropped, without guessing leg-dependent activities.
+- [x] Animate rank changes as a stack, preserving row positions through interrupted motion and respecting reduced-motion settings.
+- [x] Display the real fall-model score separately from geometric posture support.
+- [x] Clear stale or unavailable scores and require visible body geometry instead of guessing through occlusion.
+- [x] Keep the estimator independent of the shared detector contract, fall classifier, and safety controller.
+- [x] Verify constructed posture/step sequences, lifecycle states, scalar HTTP output, desktop/mobile rendering, and countdown priority.
+
+The posture estimator uses geometric rules rather than a pretrained multiclass
+activity model. Its support values are not calibrated class probabilities.
+Verification uses synthetic landmarks and browser scenarios; it does not establish
+recognition accuracy for real activities.
