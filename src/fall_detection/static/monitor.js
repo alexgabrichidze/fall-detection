@@ -13,8 +13,10 @@ let cameraListReady = false;
 let camerasRequested = false;
 let frameUrl;
 const dialog = element('link-dialog');
+const browserMonitor = window.fallMonitorBrowser;
 
 async function request(path, body) {
+  if (browserMonitor) return browserMonitor.request(path, body);
   const options = body === undefined ? {} : {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -51,7 +53,12 @@ function cameraState(view) {
   if (!view.live) return ['Demo', 'Camera is off in demo mode', 'Use “Simulate a fall” to try the response countdown.'];
   if (view.permissionPending) return ['Permission', 'Allow camera access', 'Respond to the camera prompt from your computer.'];
   if (view.fault === 'camera_permission_denied') {
-    return ['Access off', 'Camera access is off', 'In System Settings → Privacy & Security → Camera, allow the app that launched Fall Monitor, then try again.'];
+    const detail = view.browser ? 'Allow camera access in your browser’s site settings, then try again.'
+      : 'In System Settings → Privacy & Security → Camera, allow the app that launched Safe&Sound, then try again.';
+    return ['Access off', 'Camera access is off', detail];
+  }
+  if (view.fault === 'browser_model_unavailable') {
+    return ['Unavailable', 'The detection model could not start', 'Check your connection for the first download and try again.'];
   }
   if (view.fault === 'camera_permission_dependency') {
     return ['Unavailable', 'Camera support is missing', 'Install the live dependencies from the project README.'];
@@ -59,6 +66,7 @@ function cameraState(view) {
   if (view.fault) return ['Unavailable', 'Camera preview unavailable', 'Check the camera connection and try starting it again.'];
   if (view.paused) return ['Paused', 'Monitoring is paused', 'Resume monitoring to see the live preview.'];
   if (view.camera === 'available') return ['On', 'Camera is on', 'Waiting for a frame.'];
+  if (view.browser && view.running) return ['Starting', 'Loading the fall detector', 'The models run on this device.'];
   if (view.running) return ['Starting', 'Starting the camera', 'The preview will appear when the camera is ready.'];
   return ['Off', 'Camera is off', 'Start the camera to begin monitoring.'];
 }
@@ -97,6 +105,7 @@ function renderCamera(view) {
   visible('simulate', !view.live);
   element('simulate').disabled = monitorBusy || view.paused || view.incident !== 'monitoring';
   if (!view.hasFrame) clearFrame();
+  else if (browserMonitor) showFrame(true);
 }
 
 function renderIncident(view) {
@@ -120,6 +129,13 @@ function renderIncident(view) {
       uncertain: ['Delivery unconfirmed', 'Check the linked chat for the alert.', 'warning'],
     };
     [title, detail, tone] = outcomes[view.delivery] || outcomes.pending;
+  }
+  if (view.caregiver === 'help') {
+    title = 'Help is on the way';
+    detail = 'Your caregiver acknowledged the alert.';
+    tone = 'steady';
+  } else if (view.caregiver === 'false_alarm') {
+    detail = 'Your caregiver marked the last alert as a false alarm.';
   }
   text('incident-status', title);
   text('incident-detail', detail);
@@ -148,9 +164,9 @@ function renderTelegram(view) {
   element('telegram-chip').dataset.tone = linked ? 'steady' : 'neutral';
   const bot = telegram?.bot ? ` via @${telegram.bot}` : '';
   if (linked) {
-    text('telegram-description', `Alerts go to ${telegram.recipient || 'your Telegram chat'}${bot}.`);
+    text('telegram-description', `Alerts go to ${telegram.recipient || 'your Telegram chat'}${bot} with a short, silent camera clip when available.`);
   } else {
-    text('telegram-description', view.live ? 'Link one chat to receive alerts when the countdown expires.' : 'Open live mode to link a Telegram chat.');
+    text('telegram-description', view.live ? 'Link one chat to receive fall alerts with a short camera clip.' : 'Open live mode to link a Telegram chat.');
   }
   visible('open-link', !linked);
   element('open-link').disabled = !view.live || telegramBusy;
@@ -181,7 +197,7 @@ async function refresh() {
     text('session-label', 'Connection lost');
     element('session').dataset.tone = 'warning';
     text('camera-message', 'Monitor unavailable');
-    text('camera-detail', 'Keep Fall Monitor running to reconnect.');
+    text('camera-detail', 'Keep Safe&Sound running to reconnect.');
     for (const id of ['camera-action', 'stop-camera', 'camera-input', 'refresh-cameras', 'simulate', 'cancel', 'rearm', 'open-link', 'send-test', 'disconnect']) {
       element(id).disabled = true;
     }
@@ -243,7 +259,7 @@ async function monitor(command) {
 }
 
 async function cameraFrame() {
-  if (!state?.hasFrame) return;
+  if (browserMonitor || !state?.hasFrame) return;
   try {
     const response = await fetch('/api/frame');
     if (response.status !== 200) return;
@@ -361,4 +377,4 @@ async function pollFrame() {
 }
 
 pollStatus();
-pollFrame();
+if (!browserMonitor) pollFrame();
