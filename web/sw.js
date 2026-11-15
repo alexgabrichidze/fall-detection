@@ -1,5 +1,5 @@
 const VERSION = 'fall-monitor-__BUILD_ID__';
-const SHELL = ['/', '/monitor.js', '/monitor.css', '/geist.woff2', '/manifest.webmanifest',
+const SHELL = ['/', '/monitor.js?v=__BUILD_ID__', '/monitor.css?v=__BUILD_ID__', '/geist.woff2', '/manifest.webmanifest',
   '/icons/192.png', '/icons/512.png', ...__ASSETS__];
 
 self.addEventListener('install', event => {

@@ -71,6 +71,7 @@ await writeFile(resolve(dist, '_headers'), `/*
 `);
 
 const html = (await readFile(resolve(python, 'static/index.html'), 'utf8'))
+  .replace('href="/monitor.css"', 'href="/monitor.css?v=__BUILD_ID__"')
   .replace('  <script src="/monitor.js" defer></script>', `  <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/icons/192.png">
   <link rel="apple-touch-icon" href="/icons/192.png">
@@ -78,10 +79,9 @@ const html = (await readFile(resolve(python, 'static/index.html'), 'utf8'))
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Safe&amp;Sound">
-  <script type="module" src="/monitor.js"></script>`)
+  <script type="module" src="/monitor.js?v=__BUILD_ID__"></script>`)
   .replace('<img id="preview" alt="Local camera preview with pose landmarks" hidden>',
     '<video id="preview" aria-label="Local camera preview" muted playsinline autoplay hidden></video>');
-await writeFile(resolve(dist, 'index.html'), html);
 await Promise.all([
   readFile(fall).then(data => writeFile(resolve(dist, 'models/fall.tflite'), fixTensorSignatures(data))),
   cp(pose, resolve(dist, 'models/pose.task')),
@@ -119,11 +119,13 @@ await build({
 });
 const versionHash = createHash('sha256');
 const prompts = (await readdir(resolve(dist, 'prompts'))).map(name => 'prompts/' + name);
-for (const name of ['monitor.js', 'monitor.css', 'index.html', 'manifest.webmanifest', 'models/fall.tflite', ...prompts]) {
+versionHash.update(html);
+for (const name of ['monitor.js', 'monitor.css', 'manifest.webmanifest', 'models/fall.tflite', ...prompts]) {
   versionHash.update(await readFile(resolve(dist, name)));
 }
 const version = versionHash.digest('hex').slice(0, 12);
 const chunks = (await readdir(resolve(dist, 'chunks'))).map(name => 'chunks/' + name);
+await writeFile(resolve(dist, 'index.html'), html.replaceAll('__BUILD_ID__', version));
 await writeFile(resolve(dist, 'sw.js'), (await readFile(resolve(here, 'sw.js'), 'utf8'))
-  .replace('__BUILD_ID__', version).replace('__ASSETS__', JSON.stringify([...chunks, ...prompts].map(name => '/' + name))));
+  .replaceAll('__BUILD_ID__', version).replace('__ASSETS__', JSON.stringify([...chunks, ...prompts].map(name => '/' + name))));
 console.log('Built the installable Safe&Sound app in web/dist.');

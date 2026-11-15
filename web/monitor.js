@@ -12,12 +12,22 @@ const DELIVERY_PROMPTS = {
   uncertain: 'caregiver-alert-uncertain',
 };
 
+async function cameraChoices(mediaDevices) {
+  const devices = await mediaDevices.enumerateDevices?.().catch(() => []) || [];
+  const cameras = new Map();
+  for (const device of devices) {
+    const id = device.deviceId;
+    if (device.kind === 'videoinput' && id && id !== 'default' && !cameras.has(id)) {
+      cameras.set(id, { id, name: device.label || `Camera ${cameras.size + 1}` });
+    }
+  }
+  return [...cameras.values()];
+}
+
 export class BrowserMonitor {
   telegram = new Telegram();
   audio = new PromptAudio();
   recordings = new RollingRecordings();
-  cameraInput = 0;
-  cameras = [{ index: 0, name: 'Front or default camera' }, { index: 1, name: 'Rear camera' }];
   view = {
     live: true, browser: true, countdown: 20, running: false, permissionPending: false,
     camera: 'stopped', pose: 'unknown', modelReady: false, hasFrame: false,
@@ -37,24 +47,10 @@ export class BrowserMonitor {
 
   async request(path, body) {
     if (path === '/api/status') {
-      return { ...this.view, cameraInput: this.cameraInput, telegram: this.telegram.status,
+      return { ...this.view, telegram: this.telegram.status,
         audio: this.audio.status, voice: this.voice?.status || 'Disabled',
-        listening: this.voice?.listening || false,
+        voiceEnabled: Boolean(this.voice?.enabled), listening: this.voice?.listening || false,
         remaining: this.view.incident === 'awaiting_response' ? Math.max(0, this.deadline - Date.now()) / 1000 : null };
-    }
-    if (path === '/api/cameras') {
-      const devices = await navigator.mediaDevices?.enumerateDevices().catch(() => []) || [];
-      this.cameras = [
-        { index: 0, name: 'Front or default camera' }, { index: 1, name: 'Rear camera' },
-        ...devices.filter(device => device.kind === 'videoinput' && device.label)
-          .map((device, index) => ({ index: index + 2, name: device.label, id: device.deviceId })),
-      ];
-      if (!this.cameras.some(camera => camera.index === this.cameraInput)) this.cameraInput = 0;
-      return { cameras: this.cameras, selected: this.cameraInput };
-    }
-    if (path === '/api/camera') {
-      if (!this.stream && this.cameras.some(camera => camera.index === body.index)) this.cameraInput = body.index;
-      return {};
     }
     if (path.startsWith('/api/telegram/')) {
       const result = await this.telegram.action(path.split('/').at(-1));
@@ -62,7 +58,7 @@ export class BrowserMonitor {
       return result;
     }
     if (path === '/api/command') {
-      if (body.command === 'start') await this.start();
+      if (body.command === 'start') return this.start(body.cameraId);
       if (body.command === 'stop') this.stop();
       if (body.command === 'pause') this.pause();
       if (body.command === 'cancel') this.cancel();
@@ -92,7 +88,7 @@ export class BrowserMonitor {
     }
   }
 
-  async start() {
+  async start(cameraId) {
     this.stop();
     this.view.fault = null;
     this.view.permissionPending = true;
@@ -100,21 +96,39 @@ export class BrowserMonitor {
     this.audio.unlock();
     let stream;
     try {
-      if (!navigator.mediaDevices?.getUserMedia) throw new Error('Open this site in a browser with HTTPS camera access.');
-      const device = this.cameras.find(camera => camera.index === this.cameraInput);
-      const source = device?.id ? { deviceId: { exact: device.id } }
-        : { facingMode: { ideal: this.cameraInput === 1 ? 'environment' : 'user' } };
-      stream = await navigator.mediaDevices.getUserMedia({
+      const mediaDevices = navigator.mediaDevices;
+      if (!mediaDevices?.getUserMedia) throw new Error('Open this site in a browser with HTTPS camera access.');
+      if (!cameraId) {
+        const cameras = await cameraChoices(mediaDevices);
+        if (cameras.length > 1) {
+          this.view.camera = 'stopped';
+          return { cameras };
+        }
+      }
+      const source = cameraId ? { deviceId: { exact: cameraId } } : { facingMode: { ideal: 'user' } };
+      stream = await mediaDevices.getUserMedia({
         video: { ...source, width: { ideal: 640, max: 960 }, height: { ideal: 480, max: 960 }, frameRate: { ideal: 30 } },
         audio: false,
       });
+      // Some browsers reveal the full list only after granting camera access.
+      if (!cameraId) {
+        const cameras = await cameraChoices(mediaDevices);
+        if (cameras.length > 1) {
+          stream.getTracks().forEach(track => track.stop());
+          this.view.camera = 'stopped';
+          return { cameras };
+        }
+      }
       this.stream = stream;
       this.video.srcObject = stream;
       await this.video.play();
     } catch (error) {
+      if (stream && !this.stream) stream.getTracks().forEach(track => track.stop());
       this.stop();
-      this.view.fault = error.name === 'NotAllowedError' ? 'camera_permission_denied' : 'browser_camera_unavailable';
-      throw new Error(this.view.fault === 'camera_permission_denied' ? 'Allow this site to use the camera, then retry.' : 'Could not start this camera.');
+      this.view.fault = {
+        NotAllowedError: 'camera_permission_denied', NotFoundError: 'browser_camera_missing',
+      }[error.name] || 'browser_camera_unavailable';
+      return;
     } finally {
       this.view.permissionPending = false;
     }

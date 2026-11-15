@@ -4,9 +4,9 @@ Monitor one person with a webcam. A possible fall starts a spoken check-in and a
 
 ## Use Safe&Sound on a phone
 
-Open [Safe&Sound](https://safe-n-sound.netlify.app) in Safari on iPhone or Chrome on Android. Tap **Start camera**, then allow camera access. Choose the front or rear camera before starting. To install it, use **Share → Add to Home Screen** in Safari or **Install app** in Chrome.
+Open [Safe&Sound](https://safe-n-sound.netlify.app) in Safari on iPhone or Chrome on Android. Tap the camera preview and allow camera access. If multiple cameras are available, choose one when prompted. To install it, use **Share → Add to Home Screen** in Safari or the **Install app** option in Chrome's browser menu.
 
-The browser runs the fall model on that device. Keep the app open with the screen awake while monitoring. **Enable voice cancellation** downloads the offline speech model and asks for microphone access. The hosted app uses Netlify Functions to deliver Telegram alerts and receive caregiver replies.
+The browser runs the fall model on that device. Keep the app open with the screen awake while monitoring. Once the camera is running, use **Enable** next to **Voice response** to download the offline speech model and grant microphone access. The hosted app uses Netlify Functions to deliver Telegram alerts and receive caregiver replies.
 
 ### Build and publish the browser version
 
@@ -34,13 +34,9 @@ python -m pip install -e '.[detection,audio]'
 fall-detection --detector live --web
 ```
 
-Open `http://127.0.0.1:8765` and click **Start camera**. Use **Stop camera** to release it. Leave the Terminal process running while you monitor. `--port` selects a different local port. The browser receives previews from the app on this computer.
+Open `http://127.0.0.1:8765` and click the camera preview. Leave the Terminal process running while you monitor. `--port` selects a different local port. The browser receives previews from the app on this computer.
 
-Choose **Input camera** above the preview before starting. To change inputs,
-click **Stop camera**, choose another camera, then click **Start camera**.
-Use **Refresh** after connecting a new camera. Stopping or changing the camera
-does not cancel an active incident countdown. Camera selection lasts for the
-current session; `--camera N` still sets the initial input.
+If multiple cameras are available, pick one when prompted. Click **Stop** and then click the preview again to switch cameras. An active incident countdown continues while you change cameras.
 
 On the first Mac launch, allow camera access when macOS prompts. If access is off, enable it for the app you launched from (usually Terminal) in **System Settings → Privacy & Security → Camera**, then relaunch.
 
