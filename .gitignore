@@ -26,3 +26,4 @@ models/*.onnx
 models/*.pth
 models/*.pt
 
+models/vosk-model-*/

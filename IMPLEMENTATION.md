@@ -177,14 +177,20 @@ Reference: [MediaPipe Pose Landmarker](https://developers.google.com/edge/mediap
 
 ## 13. Add voice cancellation only after the core works (B, optional)
 
-- [ ] Install Vosk and a small local English model.
-- [ ] Capture microphone input in memory only during the response window and display when listening is active.
-- [ ] Accept clearly recognized cancellation phrases such as "I'm okay."
-- [ ] Treat silence or unclear speech as no confirmed response.
-- [ ] Prevent the application's own prompt from cancelling an incident.
-- [ ] Stop listening when the incident is cancelled, the response window ends, or the application exits.
-- [ ] Retain the button and keyboard controls when speech recognition fails.
-- [ ] Repeat the core-flow checks with speech recognition enabled.
+- [x] Install Vosk and a small local English model.
+- [x] Capture microphone input in memory only during the response window and display when listening is active.
+- [x] Accept clearly recognized cancellation phrases such as "I'm okay."
+- [x] Treat silence or unclear speech as no confirmed response.
+- [x] Prevent the application's own prompt from cancelling an incident.
+- [x] Stop listening when the incident is cancelled, the response window ends, or the application exits.
+- [x] Retain the button and keyboard controls when speech recognition fails.
+- [x] Run automated core-flow checks with speech recognition enabled and load the real local model.
+- [ ] Verify a live spoken response through the development computer microphone.
+
+Voice capture starts only after successful prompt playback plus a 0.4-second echo guard.
+Automated checks cover positive/negative phrases, input failures, stale results, and
+expiry. The real Vosk model rejects the bundled prompt. Live spoken recognition
+remains unverified; setup and launch flags are documented in README.md.
 
 ## 14. Write the run instructions (B writes; A verifies detection setup)
 

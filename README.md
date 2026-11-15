@@ -17,6 +17,12 @@ fall-detection --detector live --web
 
 Open `http://127.0.0.1:8765` and click **Start camera**. Use **Stop camera** to release it. Leave the Terminal process running while you monitor. `--port` selects a different local port. The browser receives previews from the app on this computer.
 
+Choose **Input camera** above the preview before starting. To change inputs,
+click **Stop camera**, choose another camera, then click **Start camera**.
+Use **Refresh** after connecting a new camera. Stopping or changing the camera
+does not cancel an active incident countdown. Camera selection lasts for the
+current session; `--camera N` still sets the initial input.
+
 On the first Mac launch, allow camera access when macOS prompts. If access is off, enable it for the app you launched from (usually Terminal) in **System Settings → Privacy & Security → Camera**, then relaunch.
 
 On Windows, create the environment with `py -3.12 -m venv .venv` and activate it with `.venv\Scripts\Activate.ps1`. Live mode was exercised on Apple Silicon with Python 3.12.14. MediaPipe 0.10.21's macOS universal2 wheel has an x86_64-only tag in its internal metadata, so `pip check` can flag it on Apple Silicon even though the arm64 build imports and runs.
@@ -32,7 +38,34 @@ On Windows, create the environment with `py -3.12 -m venv .venv` and activate it
 
 The window shows camera, pose, classifier, audio, and delivery status. Missing or unreliable tracking clears the movement window and displays an unknown score. If the camera fails, restart the app to reopen it. The app keeps an active countdown running through camera loss or a failed prompt.
 
-The voice prompts play locally through the speakers. Use `--prompt PATH` to replace the opening message with your own mono or stereo 16-bit PCM WAV up to 10 seconds long.
+The voice prompts play locally through the speakers. Use `--prompt PATH` to replace the opening message with your own mono or stereo 16-bit PCM WAV up to 10 seconds long. Microphone capture is off unless you enable optional voice cancellation.
+
+## Optional offline voice cancellation
+
+Vosk recognizes **“I'm okay”** or **“I am okay”** locally. Enable it explicitly:
+
+```bash
+python -m pip install -e '.[voice]'
+curl -fL https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip -o /tmp/fall-voice-model.zip
+python -m zipfile -e /tmp/fall-voice-model.zip models
+fall-detection --detector live --web --voice
+```
+
+The model is already installed in this development checkout. Using its existing environment, run:
+
+```bash
+venv/bin/fall-detection --detector live --web --voice
+```
+
+The [small English model](https://alphacephei.com/vosk/models) is Apache-2.0 licensed. Its download SHA-256 is `30f26242c4eb449f948e42cb302dd7a686cb29a3423a8367f99ff41780942498`. Keep the extracted directory outside Git. `--voice-model PATH` selects another local model directory. No network access is needed after installation.
+
+The microphone opens after successful prompt playback and a 0.4-second echo guard, only while a response is pending. Listening pauses for the spoken countdown reminder and resumes after playback and the echo guard. Wait for **Microphone active** before speaking, then pause briefly so recognition can finish. Only a complete matching phrase with every word confidence at least 0.8 cancels the incident; partial results, silence, and other recognized phrases do not. This threshold does not guarantee correct recognition. Button and keyboard cancellation remain available.
+
+The **Voice response** row shows readiness, model loading, microphone activity, and failures. Input audio and recognized text remain in memory and are discarded. Listening stops on cancellation, countdown expiry, or exit. A failed prompt leaves voice capture off. A missing model or microphone failure leaves the countdown running. Simulation mode never opens the microphone.
+
+Use the system microphone by default, or pass `--microphone N` with a sounddevice input index. List devices with `venv/bin/python -m sounddevice`. On macOS, allow microphone access for Terminal or the launching app in **Privacy & Security → Microphone**. The microphone belongs to the Python process, not the browser.
+
+Automated checks cover response filtering, playback gating, microphone cleanup/failure, stale incident results, manual cancellation, and expiry. The installed Vosk model loads and rejects the bundled prompt as a cancellation. Recognition of a person's live spoken response has not yet been verified on this computer.
 
 ## Send real Telegram alerts
 

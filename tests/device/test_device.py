@@ -41,6 +41,7 @@ class DeviceStatusTests(unittest.TestCase):
         from fall_detection.device import OpenCVDevice
         device = OpenCVDevice.__new__(OpenCVDevice)
         device.cv, device.np = cv2, np
+        device._telegram_enabled = False
         frame = BgrFrame(2, 2, bytes([25, 50, 75] * 4))
         preview = Preview(10, DetectionSource.SIMULATED, CameraStatus.AVAILABLE,
                           PoseStatus.VALID, frame=frame,

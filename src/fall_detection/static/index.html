@@ -36,6 +36,16 @@
           <h2 id="camera-title"><i class="camera-icon" aria-hidden="true"></i>Camera preview</h2>
           <span id="camera-chip" class="chip" data-tone="neutral">Off</span>
         </div>
+        <div id="camera-input-controls" class="camera-input-controls" hidden>
+          <label for="camera-input">Input camera</label>
+          <div class="camera-input-row">
+            <select id="camera-input" aria-describedby="camera-input-help" disabled>
+              <option value="">Loading cameras…</option>
+            </select>
+            <button id="refresh-cameras" class="button quiet" type="button">Refresh</button>
+          </div>
+          <p id="camera-input-help">Choose a camera before starting.</p>
+        </div>
         <div class="stage" id="stage">
           <img id="preview" alt="Local camera preview with pose landmarks" hidden>
           <div id="camera-placeholder" class="stage-message">
@@ -70,6 +80,7 @@
           <button id="rearm" class="button outline full-width" type="button" hidden>Rearm monitoring</button>
           <dl class="incident-status">
             <div><dt>Response window</dt><dd id="window-length">20 seconds</dd></div>
+            <div><dt>Voice response</dt><dd id="voice-status" role="status">Disabled</dd></div>
             <div><dt>Audio prompt</dt><dd id="audio-status">Ready</dd></div>
           </dl>
         </section>

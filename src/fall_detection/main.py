@@ -17,7 +17,8 @@ from .fake_detector import FakeDetector
 from .notifier import (
     DeliveryStatus, FakeSender, NotificationWorker, TelegramSender,
 )
-from .safety import EffectKind, SafetyController
+from .safety import EffectKind, SafetyController, SafetyState
+from .voice import DEFAULT_VOICE_MODEL, VoiceListener
 from .telegram_link import create_telegram_link, telegram_config
 
 
@@ -41,10 +42,11 @@ class Application:
     """
 
     def __init__(self, detector: Detector, notifier, audio, *, config=ApplicationConfig(),
-                 clock: Callable[[], float] = monotonic, event_sink=None):
+                 clock: Callable[[], float] = monotonic, event_sink=None, voice=None):
         self.detector = detector
         self.notifier = notifier
         self.audio = audio
+        self.voice = voice
         self.config = config
         self.clock = clock
         self.safety = SafetyController(config.countdown_seconds, clock=clock)
@@ -90,10 +92,14 @@ class Application:
                 if self.safety.cancel():
                     self.audio.cancel()
                     self._pending_prompt = None
+                    if self.voice:
+                        self.voice.cancel()
             elif command == Command.RESET:
                 if self.safety.reset():
                     self.audio.cancel()
                     self._pending_prompt = None
+                    if self.voice:
+                        self.voice.cancel()
                     self.audio_status = "not requested"
                     # Discard the detector's pre-reset movement history too.
                     # Already queued events are rejected by the reset timestamp.
@@ -141,6 +147,14 @@ class Application:
                 self._preview = preview
         except Exception:
             self.detector_error = "detector worker unavailable"
+        if self.voice:
+            response = self.voice.poll()
+            if (response and self.safety.incident
+                    and response.incident_id == self.safety.incident.incident_id
+                    and self.safety.cancel()):
+                self.audio.cancel()
+                self._pending_prompt = None
+                self.voice.cancel()
         # Faults above never suppress the active incident's clock.
         for effect in self.safety.tick():
             if effect.kind == EffectKind.PROMPT:
@@ -148,10 +162,14 @@ class Application:
                 if not self.audio.play(effect.incident.incident_id):
                     self.audio_status = "error: audio worker unavailable"
             elif effect.kind == EffectKind.REMINDER:
+                if self.voice:
+                    self.voice.cancel()
                 self._pending_prompt = PROMPTS / "ten-seconds-left.wav"
             elif effect.kind == EffectKind.ALERT:
                 self.audio.cancel()
                 self._pending_prompt = None
+                if self.voice:
+                    self.voice.cancel()
                 if not self.notifier.submit(effect.incident):
                     self.safety.delivery_result(effect.incident.incident_id, DeliveryStatus.FAILED.value)
         result = self.notifier.poll()
@@ -162,7 +180,12 @@ class Application:
         audio_result = self.audio.poll()
         if audio_result and self.safety.incident and audio_result.incident_id == self.safety.incident.incident_id:
             self.audio_status = audio_result.status
-        if self._pending_prompt and self.audio.play(self.safety.incident.incident_id, self._pending_prompt):
+            if (self.voice and not self._pending_prompt and audio_result.status == "played"
+                    and self.safety.state == SafetyState.AWAITING_RESPONSE):
+                self.voice.start(audio_result.incident_id, self.safety.incident.deadline)
+        # Speaker cues wait until the microphone worker has released input.
+        if (self._pending_prompt and (not self.voice or self.voice.idle)
+                and self.audio.play(self.safety.incident.incident_id, self._pending_prompt)):
             self._pending_prompt = None
             self.audio_status = "playing"
         return self.view()
@@ -173,9 +196,17 @@ class Application:
             age = self.clock() - self._preview.timestamp
             if not 0 <= age <= self.config.preview_timeout_seconds:
                 error = "preview unavailable or stale"
+        voice_status, listening = self.voice.status if self.voice else ("disabled", False)
+        if (self.voice and self.audio_status == "playing" and not listening
+                and self.safety.state == SafetyState.AWAITING_RESPONSE):
+            voice_status = "waiting for prompt"
+        elif (self.voice and self.audio_status.startswith("error")
+              and self.safety.state == SafetyState.AWAITING_RESPONSE):
+            voice_status = "unavailable: prompt playback failed"
         return View(self._preview, self.safety.state, self.safety.remaining(), self.safety.delivery,
                     self.audio_status, self.paused, error,
-                    self.safety.incident.incident_id if self.safety.incident else None, self.running)
+                    self.safety.incident.incident_id if self.safety.incident else None, self.running,
+                    voice_status, listening)
 
     def close(self) -> tuple[str, ...]:
         errors = []
@@ -183,6 +214,8 @@ class Application:
             self.detector.stop()
         except Exception:
             errors.append("detector cleanup failed")
+        if self.voice and not self.voice.close():
+            errors.append("voice worker still stopping")
         if not self.audio.close():
             errors.append("audio worker still stopping")
         if not self.notifier.close():
@@ -209,6 +242,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--event-after", type=float, default=0.1)
     parser.add_argument("--countdown", type=float, default=20)
     parser.add_argument("--prompt", type=Path, help="prerecorded 16-bit PCM WAV, at most 10 seconds")
+    parser.add_argument("--voice", action="store_true", help="enable offline I'm okay cancellation after the prompt")
+    parser.add_argument("--voice-model", type=Path, default=DEFAULT_VOICE_MODEL, help="local Vosk English model directory")
+    parser.add_argument("--microphone", type=int, help="sounddevice input index (default: system microphone)")
     parser.add_argument("--notification-outcome", choices=("simulated_accepted", "failed", "uncertain"), default="simulated_accepted")
     parser.add_argument("--telegram", action="store_true", help="enable real Telegram alerts in the live window")
     parser.add_argument("--test-telegram", action="store_true", help="send one labelled test using environment credentials")
@@ -226,6 +262,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.detector is None:
         parser.error("--detector is required unless using --test-telegram")
     live = args.detector == "live"
+    if args.voice and not live:
+        parser.error("--voice requires --detector live; simulations never capture microphone audio")
+    if args.microphone is not None and (not args.voice or args.microphone < 0):
+        parser.error("--microphone requires --voice and a nonnegative input index")
     use_ui = args.ui or (live and not (args.headless or args.web))
     if args.telegram and not (live and use_ui):
         parser.error("--telegram is for the native live window. Link a chat in the page when using --web.")
@@ -275,7 +315,11 @@ def main(argv: list[str] | None = None) -> int:
             from .web_device import WebDevice
 
             try:
-                renderer = WebDevice(args.port, live=live, countdown=args.countdown, telegram=telegram)
+                renderer = WebDevice(
+                    args.port, live=live, countdown=args.countdown, telegram=telegram,
+                    camera_index=(lambda: detector.camera_index) if live else None,
+                    select_camera=detector.select_camera if live else None,
+                )
             except OSError:
                 print(f"Could not open port {args.port}. Choose another port with --port.", file=sys.stderr)
                 return 2
@@ -293,7 +337,8 @@ def main(argv: list[str] | None = None) -> int:
                 print("SIMULATION ONLY: no camera, AI inference, microphone, or real notifications.", flush=True)
             print("Local prompt audio enabled." if prompt else "Audio prompt missing; countdown and cancellation remain available.", flush=True)
         app = Application(detector, NotificationWorker(sender), PromptPlayer(prompt), config=config,
-                          event_sink=renderer.event if isinstance(renderer, ConsoleRenderer) else None)
+                          event_sink=renderer.event if isinstance(renderer, ConsoleRenderer) else None,
+                          voice=VoiceListener(args.voice_model, args.microphone) if args.voice else None)
         if not (args.web and live):
             app.start()
         # Map the window before polling visibility or keyboard/mouse events.

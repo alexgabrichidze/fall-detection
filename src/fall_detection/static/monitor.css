@@ -28,9 +28,9 @@
 [hidden] { display: none !important; }
 body { margin: 0; color: var(--ink); background: var(--page); }
 h1, h2, p, dl, dd { margin: 0; }
-button, input, a { font: inherit; }
+button, input, select, a { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
-button:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visible {
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible, summary:focus-visible {
   outline: 3px solid #399779;
   outline-offset: 3px;
 }
@@ -94,6 +94,16 @@ h1 { font-size: clamp(2.3rem, 4.1vw, 3.65rem); line-height: 1.07; letter-spacing
 .chip[data-tone='neutral'] { color: #3d4d43; background: var(--neutral); }
 .chip[data-tone='steady'] { color: var(--green-dark); background: var(--green-soft); }
 .chip[data-tone='warning'] { color: #704710; background: var(--warning); }
+
+.camera-input-controls { margin-bottom: 18px; }
+.camera-input-controls label { display: block; margin-bottom: 6px; font-size: .9rem; font-weight: 650; }
+.camera-input-row { display: flex; gap: 8px; align-items: center; }
+.camera-input-row select {
+  min-width: 0; flex: 1; min-height: 42px; padding: 8px 10px;
+  border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--surface);
+}
+.camera-input-row select:disabled { color: var(--muted); background: var(--neutral); }
+.camera-input-controls p { margin-top: 6px; font-size: .82rem; color: var(--muted); }
 
 .stage {
   position: relative;

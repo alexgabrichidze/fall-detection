@@ -9,6 +9,7 @@ from time import monotonic
 from uuid import uuid4
 
 from . import detection_config as cfg
+from .camera_inputs import camera_backend
 from .contracts import (
     BgrFrame, CameraStatus, DetectionEvent, DetectionSource, EventKind, FaultCode,
     Landmark, PoseStatus, Preview,
@@ -101,6 +102,21 @@ class LiveDetector:
         self._overflow: DetectionEvent | None = None
         self._preview = Preview(monotonic(), self.source, CameraStatus.STOPPED)
 
+    @property
+    def camera_index(self) -> int:
+        with self._lock:
+            return self._camera
+
+    def select_camera(self, index: int) -> None:
+        if type(index) is not int or not 0 <= index <= 255:
+            raise ValueError("Choose a valid camera input.")
+        with self._lock:
+            if self._session is not None:
+                raise ValueError("Stop the camera before changing the input.")
+            self._camera = index
+            self._revision += 1
+            self._preview = Preview(monotonic(), self.source, CameraStatus.STOPPED)
+
     def start(self) -> None:
         with self._lock:
             if self._session is not None:
@@ -187,7 +203,7 @@ class LiveDetector:
                 return
             camera = None
             try:
-                camera = cv2.VideoCapture(self._camera)
+                camera = cv2.VideoCapture(self.camera_index, camera_backend())
                 if not camera.isOpened():
                     self._fault(session, FaultCode.CAMERA_FAILURE)
                     return

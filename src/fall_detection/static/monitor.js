@@ -8,6 +8,9 @@ const visible = (id, show) => { element(id).hidden = !show; };
 let state = null;
 let monitorBusy = false;
 let telegramBusy = false;
+let cameraListBusy = false;
+let cameraListReady = false;
+let camerasRequested = false;
 let frameUrl;
 const dialog = element('link-dialog');
 
@@ -77,6 +80,20 @@ function renderCamera(view) {
   element('camera-action').disabled = monitorBusy || view.permissionPending || (!view.live && Boolean(view.fault));
   visible('stop-camera', view.live && view.running && !view.permissionPending);
   element('stop-camera').disabled = monitorBusy;
+  visible('camera-input-controls', view.live);
+  const input = element('camera-input');
+  input.disabled = monitorBusy || cameraListBusy || !cameraListReady || view.running || view.permissionPending;
+  element('refresh-cameras').disabled = monitorBusy || cameraListBusy || view.running || view.permissionPending;
+  text('camera-input-help', view.running || view.permissionPending
+    ? 'Stop the camera to change the input. An active incident countdown will continue.'
+    : 'Choose a camera before starting. Refresh after connecting another camera.');
+  if (cameraListReady && !monitorBusy && document.activeElement !== input) {
+    const selected = String(view.cameraInput);
+    if (!Array.from(input.options).some(option => option.value === selected)) {
+      input.add(new Option(`Camera ${view.cameraInput}`, selected));
+    }
+    input.value = selected;
+  }
   visible('simulate', !view.live);
   element('simulate').disabled = monitorBusy || view.paused || view.incident !== 'monitoring';
   if (!view.hasFrame) clearFrame();
@@ -121,6 +138,7 @@ function renderIncident(view) {
   text('window-length', `${view.countdown} seconds`);
   const audio = { 'not requested': 'Ready', playing: 'Playing', played: 'Played', cancelled: 'Stopped' };
   text('audio-status', audio[view.audio] || 'Unavailable');
+  text('voice-status', view.listening ? `Microphone active — ${view.voice}` : (view.voice || 'Disabled'));
 }
 
 function renderTelegram(view) {
@@ -153,6 +171,10 @@ async function refresh() {
   try {
     state = await request('/api/status');
     render(state);
+    if (state.live && !camerasRequested) {
+      camerasRequested = true;
+      await loadCameras();
+    }
   } catch {
     state = null;
     clearFrame();
@@ -160,9 +182,48 @@ async function refresh() {
     element('session').dataset.tone = 'warning';
     text('camera-message', 'Monitor unavailable');
     text('camera-detail', 'Keep Fall Monitor running to reconnect.');
-    for (const id of ['camera-action', 'stop-camera', 'simulate', 'cancel', 'rearm', 'open-link', 'send-test', 'disconnect']) {
+    for (const id of ['camera-action', 'stop-camera', 'camera-input', 'refresh-cameras', 'simulate', 'cancel', 'rearm', 'open-link', 'send-test', 'disconnect']) {
       element(id).disabled = true;
     }
+  }
+}
+
+async function loadCameras() {
+  if (!state?.live || cameraListBusy) return;
+  cameraListBusy = true;
+  renderCamera(state);
+  try {
+    const result = await request('/api/cameras');
+    const input = element('camera-input');
+    input.replaceChildren();
+    for (const camera of result.cameras) {
+      input.add(new Option(camera.name, String(camera.index)));
+    }
+    input.value = String(result.selected);
+    cameraListReady = true;
+    feedback('notice', '');
+  } catch (error) {
+    feedback('notice', error.message);
+  } finally {
+    cameraListBusy = false;
+    if (state) renderCamera(state);
+  }
+}
+
+async function changeCamera() {
+  if (!state?.live || monitorBusy || state.running || state.permissionPending) return;
+  const index = Number(element('camera-input').value);
+  monitorBusy = true;
+  renderCamera(state);
+  feedback('notice', '');
+  try {
+    await request('/api/camera', { index });
+    clearFrame();
+  } catch (error) {
+    feedback('notice', error.message);
+  } finally {
+    monitorBusy = false;
+    await refresh();
   }
 }
 
@@ -263,6 +324,8 @@ element('camera-action').addEventListener('click', () => {
   if (state) monitor(state.live && (!state.running || state.fault) ? 'start' : 'pause');
 });
 element('stop-camera').addEventListener('click', () => monitor('stop'));
+element('camera-input').addEventListener('change', changeCamera);
+element('refresh-cameras').addEventListener('click', loadCameras);
 element('cancel').addEventListener('click', () => monitor('cancel'));
 element('rearm').addEventListener('click', () => monitor('reset'));
 element('simulate').addEventListener('click', () => monitor('simulate_fall'));

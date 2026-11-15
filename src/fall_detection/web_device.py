@@ -1,12 +1,14 @@
 """Loopback browser interface for the existing detector and safety loop."""
 
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from collections.abc import Callable
 import json
 from pathlib import Path
 from queue import Empty, Full, Queue
 from threading import Lock, Thread
 
 from .device import Command, View, draw_pose
+from .camera_inputs import list_camera_inputs
 from .notifier import DeliveryStatus
 from .telegram_link import RelayTelegramLink, TelegramLink
 
@@ -20,11 +22,15 @@ _ASSETS = {
 
 
 class WebDevice:
-    def __init__(self, port: int, *, live: bool, countdown: float, telegram: TelegramLink | RelayTelegramLink | None):
+    def __init__(self, port: int, *, live: bool, countdown: float, telegram: TelegramLink | RelayTelegramLink | None,
+                 camera_index: Callable[[], int] | None = None,
+                 select_camera: Callable[[int], None] | None = None):
         self.live = live
         self.countdown = countdown
         self.telegram = telegram
         self.permission_pending = False
+        self._camera_index = camera_index or (lambda: 0)
+        self._select_camera = select_camera
         self._view: View | None = None
         self._commands: Queue[Command] = Queue(maxsize=16)
         self._frame_lock = Lock()
@@ -61,6 +67,7 @@ class WebDevice:
             "live": self.live,
             "running": view.running if view else False,
             "permissionPending": self.permission_pending,
+            "cameraInput": self._camera_index() if self.live else None,
             "countdown": self.countdown,
             "camera": view.preview.camera_status.value if view else "stopped",
             "pose": view.preview.pose_status.value if view else "unknown",
@@ -72,8 +79,35 @@ class WebDevice:
             "remaining": view.remaining if view else None,
             "delivery": view.delivery if view else "none",
             "audio": view.audio if view else "not requested",
+            "voice": view.voice if view else "disabled",
+            "listening": view.listening if view else False,
             "telegram": self.telegram.status() if self.telegram else None,
         }
+
+    def camera_inputs(self) -> dict:
+        if not self.live:
+            return {"cameras": [], "selected": None}
+        try:
+            cameras = list_camera_inputs()
+        except (ImportError, OSError, RuntimeError, NotImplementedError):
+            raise ValueError("Could not list cameras. Install the detection dependencies and try again.") from None
+        selected = self._camera_index()
+        if not any(camera["index"] == selected for camera in cameras):
+            cameras.append({"index": selected, "name": f"Camera {selected} (not detected)"})
+        return {"cameras": cameras, "selected": selected}
+
+    def select_camera(self, index: int) -> None:
+        if not self.live or self._select_camera is None:
+            raise ValueError("Camera selection is available in live mode.")
+        if type(index) is not int or not 0 <= index <= 255:
+            raise ValueError("Choose a valid camera input.")
+        if self.permission_pending or (self._view and self._view.running):
+            raise ValueError("Stop the camera before changing the input.")
+        if not any(camera["index"] == index for camera in self.camera_inputs()["cameras"]):
+            raise ValueError("Camera input is no longer available. Refresh the camera list.")
+        # The detector also checks its session under a lock, closing a race
+        # between this request and the main loop starting capture.
+        self._select_camera(index)
 
     def jpeg(self) -> bytes:
         view = self._view
@@ -124,6 +158,11 @@ class MonitorHandler(BaseHTTPRequestHandler):
             self._respond((_STATIC / asset).read_bytes(), media)
         elif path == "/api/status":
             self._json(self.device.status())
+        elif path == "/api/cameras":
+            try:
+                self._json(self.device.camera_inputs())
+            except ValueError as error:
+                self._json({"error": str(error)}, 400)
         elif path == "/api/frame":
             try:
                 frame = self.device.jpeg()
@@ -159,6 +198,9 @@ class MonitorHandler(BaseHTTPRequestHandler):
             self._json(response)
 
     def _action(self, body: dict) -> dict:
+        if self.path == "/api/camera":
+            self.device.select_camera(body.get("index"))
+            return {"selected": self.device.status()["cameraInput"]}
         if self.path == "/api/command":
             try:
                 command = Command(body.get("command"))

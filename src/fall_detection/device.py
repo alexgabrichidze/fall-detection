@@ -71,6 +71,8 @@ class View:
     detector_error: str | None
     incident_id: str | None
     running: bool = False
+    voice: str = "disabled"
+    listening: bool = False
 
 
 def status_lines(view: View, *, telegram_enabled: bool = False) -> tuple[str, ...]:
@@ -84,13 +86,15 @@ def status_lines(view: View, *, telegram_enabled: bool = False) -> tuple[str, ..
     score = "unknown" if preview.model_score is None else f"{preview.model_score:.3f} (not calibrated confidence)"
     fault = view.detector_error or (preview.fault_code.value if preview.fault_code else "none")
     monitoring = "UNAVAILABLE" if fault != "none" else ("PAUSED" if view.paused else "enabled")
+    if view.paused and fault != "none":
+        monitoring += " (PAUSED)"
     return (
         source,
         f"Monitoring: {monitoring} | detector fault: {fault}",
         f"Camera: {preview.camera_status.value} | pose: {preview.pose_status.value} | model ready: {preview.model_ready}",
         f"Incident: {view.state.value}{countdown}",
         f"Delivery: {view.delivery}",
-        f"Audio: {view.audio}",
+        f"Audio: {view.audio} | Mic: {'ACTIVE' if view.listening else 'off'} | Voice: {view.voice}",
         f"Model score: {score}",
         "C/Space: cancel | P: pause/resume | R: reset/rearm | Q/Esc: quit",
         "Simulation keys: F fall, X camera failure" if preview.source == DetectionSource.SIMULATED else "Falls outside camera view cannot be detected.",
@@ -122,11 +126,11 @@ class ConsoleRenderer:
         # Print transitions, not every video frame or countdown tick.
         status = (view.state, view.delivery, view.audio, view.paused, view.detector_error,
                   view.preview.camera_status, view.preview.pose_status, view.preview.model_ready,
-                  view.preview.fault_code)
+                  view.preview.fault_code, view.voice, view.listening)
         if status != self._last_status:
             self.preview(view.preview)
             print(f"[{view.preview.source.value.upper()}] incident={view.state.value} "
-                  f"delivery={view.delivery} audio={view.audio} paused={view.paused} "
+                  f"delivery={view.delivery} audio={view.audio} voice={view.voice} mic_active={view.listening} paused={view.paused} "
                   f"detector_error={view.detector_error or 'none'}", file=self._output, flush=True)
             self._last_status = status
 
