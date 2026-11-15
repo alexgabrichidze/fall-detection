@@ -368,3 +368,12 @@ details code { display: block; margin-top: 6px; padding: 7px 9px; overflow-wrap:
 .camera-start:disabled { cursor: default; }
 .camera-options { display: grid; gap: 10px; }
 .camera-options .button { justify-content: flex-start; text-align: left; }
+
+/* Small wordmark shares the existing activity header; no additional navbar. */
+.activity-heading-meta { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.app-wordmark { color: var(--green); font-size: .76rem; font-weight: 700; letter-spacing: -.02em; white-space: nowrap; }
+.app-wordmark > span { color: var(--muted); font-weight: 500; }
+@media (max-width: 440px) {
+  .activity-heading-meta { gap: 8px; }
+  .app-wordmark { font-size: .7rem; }
+}
