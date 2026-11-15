@@ -121,6 +121,13 @@ function renderIncident(view) {
     };
     [title, detail, tone] = outcomes[view.delivery] || outcomes.pending;
   }
+  if (view.caregiver === 'help') {
+    title = 'Help is on the way';
+    detail = 'Your caregiver acknowledged the alert.';
+    tone = 'steady';
+  } else if (view.caregiver === 'false_alarm') {
+    detail = 'Your caregiver marked the last alert as a false alarm.';
+  }
   text('incident-status', title);
   text('incident-detail', detail);
   element('incident-panel').dataset.tone = tone;
@@ -148,9 +155,9 @@ function renderTelegram(view) {
   element('telegram-chip').dataset.tone = linked ? 'steady' : 'neutral';
   const bot = telegram?.bot ? ` via @${telegram.bot}` : '';
   if (linked) {
-    text('telegram-description', `Alerts go to ${telegram.recipient || 'your Telegram chat'}${bot}.`);
+    text('telegram-description', `Alerts go to ${telegram.recipient || 'your Telegram chat'}${bot} with a short, silent camera clip when available.`);
   } else {
-    text('telegram-description', view.live ? 'Link one chat to receive alerts when the countdown expires.' : 'Open live mode to link a Telegram chat.');
+    text('telegram-description', view.live ? 'Link one chat to receive fall alerts with a short camera clip.' : 'Open live mode to link a Telegram chat.');
   }
   visible('open-link', !linked);
   element('open-link').disabled = !view.live || telegramBusy;
