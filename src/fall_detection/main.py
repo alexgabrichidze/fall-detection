@@ -7,7 +7,7 @@ from pathlib import Path
 import sys
 from time import monotonic, sleep
 
-from .audio import PromptPlayer
+from .audio import PROMPTS, PromptPlayer
 from .config import ApplicationConfig, ScaffoldConfig
 from .contracts import CameraStatus, Detector, DetectionSource, EventKind, PoseStatus, Preview
 from .detection import create_live_detector
@@ -18,9 +18,7 @@ from .notifier import (
     DeliveryStatus, FakeSender, NotificationWorker, TelegramSender,
 )
 from .safety import EffectKind, SafetyController
-from .telegram_link import TelegramLink, telegram_config
-
-DEFAULT_PROMPT = Path("assets/prompts/are-you-okay.wav")
+from .telegram_link import create_telegram_link, telegram_config
 
 
 def consume_pending(detector: Detector, renderer: ConsoleRenderer) -> int:
@@ -54,6 +52,7 @@ class Application:
         self.paused = False
         self.detector_error = None
         self.audio_status = "not requested"
+        self._pending_prompt: Path | None = None
         self.quit = False
         self._event_sink = event_sink
         self._preview = Preview(clock(), detector.source, CameraStatus.STOPPED)
@@ -90,9 +89,11 @@ class Application:
             elif command == Command.CANCEL:
                 if self.safety.cancel():
                     self.audio.cancel()
+                    self._pending_prompt = None
             elif command == Command.RESET:
                 if self.safety.reset():
                     self.audio.cancel()
+                    self._pending_prompt = None
                     self.audio_status = "not requested"
                     # Discard the detector's pre-reset movement history too.
                     # Already queued events are rejected by the reset timestamp.
@@ -146,16 +147,24 @@ class Application:
                 self.audio_status = "playing"
                 if not self.audio.play(effect.incident.incident_id):
                     self.audio_status = "error: audio worker unavailable"
+            elif effect.kind == EffectKind.REMINDER:
+                self._pending_prompt = PROMPTS / "ten-seconds-left.wav"
             elif effect.kind == EffectKind.ALERT:
                 self.audio.cancel()
+                self._pending_prompt = None
                 if not self.notifier.submit(effect.incident):
                     self.safety.delivery_result(effect.incident.incident_id, DeliveryStatus.FAILED.value)
         result = self.notifier.poll()
         if result:
-            self.safety.delivery_result(result.incident_id, result.status.value)
+            recorded = self.safety.delivery_result(result.incident_id, result.status.value)
+            if recorded and result.status == DeliveryStatus.ACCEPTED:
+                self._pending_prompt = PROMPTS / "caregiver-notified.wav"
         audio_result = self.audio.poll()
         if audio_result and self.safety.incident and audio_result.incident_id == self.safety.incident.incident_id:
             self.audio_status = audio_result.status
+        if self._pending_prompt and self.audio.play(self.safety.incident.incident_id, self._pending_prompt):
+            self._pending_prompt = None
+            self.audio_status = "playing"
         return self.view()
 
     def view(self) -> View:
@@ -236,7 +245,7 @@ def main(argv: list[str] | None = None) -> int:
         else:
             timing = ScaffoldConfig(duration if duration is not None else max(1.0, args.event_after + 1), args.event_after)
             detector = FakeDetector()
-        telegram = TelegramLink() if args.web and live else None
+        telegram = create_telegram_link() if args.web and live else None
         if telegram:
             sender = telegram.notify
         elif args.telegram:
@@ -245,7 +254,9 @@ def main(argv: list[str] | None = None) -> int:
             sender = FakeSender(DeliveryStatus(args.notification_outcome))
     except ValueError as error:
         parser.error(str(error))
-    prompt = args.prompt or (DEFAULT_PROMPT if live or args.web else None)
+    prompt = args.prompt
+    if prompt is None and (live or args.web):
+        prompt = PROMPTS / ("fall-warning-20.wav" if args.countdown == 20 else "fall-warning.wav")
     renderer = None
     app = None
     try:

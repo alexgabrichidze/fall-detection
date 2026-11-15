@@ -62,12 +62,15 @@ class TelegramSender:
         # Enforce separation at the network boundary, regardless of CLI options.
         if incident.source != DetectionSource.LIVE:
             return DeliveryResult(incident.incident_id, DeliveryStatus.FAILED)
+        return DeliveryResult(incident.incident_id, self.send_alert(incident.incident_id))
+
+    def send_alert(self, incident_id: str) -> DeliveryStatus:
         text = (
             "EXPERIMENTAL FALL DETECTION: possible fall; response countdown expired. "
             "Please check on the person. "
-            f"Incident: {incident.incident_id}. No caregiver response has been confirmed."
+            f"Incident: {incident_id}. No caregiver response has been confirmed."
         )
-        return DeliveryResult(incident.incident_id, self._post(text))
+        return self._post(text)
 
     def send_test(self) -> DeliveryStatus:
         """Only called by an explicit standalone test command, never by simulations."""

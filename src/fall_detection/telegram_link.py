@@ -1,6 +1,6 @@
 """Link one private Telegram chat using a short-lived /start link."""
 
-from http.client import HTTPSConnection, HTTPException
+from http.client import HTTPConnection, HTTPSConnection, HTTPException
 import json
 import os
 from pathlib import Path
@@ -9,26 +9,73 @@ from secrets import token_urlsafe
 from tempfile import NamedTemporaryFile
 from threading import Lock
 from time import monotonic
+from urllib.parse import urlsplit
 
 from .contracts import DetectionSource
-from .notifier import DeliveryStatus, FakeSender, TelegramConfig, TelegramSender
+from .notifier import DeliveryResult, DeliveryStatus, FakeSender, TelegramConfig, TelegramSender
 from .safety import Incident
 
 
-class TelegramLink:
-    def __init__(self, path: Path = Path(".env.telegram.json")) -> None:
+OWNER_SETTINGS = Path(".env.telegram.json")
+
+
+def read_settings(path: Path) -> dict:
+    try:
+        settings = json.loads(path.read_text())
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError):
+        raise ValueError("Could not read the local Telegram settings.") from None
+    if not isinstance(settings, dict):
+        raise ValueError("The local Telegram settings must be a JSON object.")
+    return settings
+
+
+def telegram_request(token: str, method: str, body: dict):
+    connection = HTTPSConnection("api.telegram.org", timeout=7)
+    try:
+        connection.request("POST", f"/bot{token}/{method}", json.dumps(body).encode(),
+                           {"Content-Type": "application/json"})
+        response = connection.getresponse()
+        status = response.status
+        payload = json.loads(response.read(1024 * 1024))
+    except (HTTPException, OSError, ValueError):
+        raise ValueError("Could not reach Telegram. Check your connection and try again.") from None
+    finally:
+        connection.close()
+    if status in (401, 404):
+        raise ValueError("Telegram rejected the bot token. Check it in BotFather.")
+    if status == 409:
+        raise ValueError("Another service is receiving messages for this bot.")
+    if not isinstance(payload, dict) or payload.get("ok") is not True:
+        raise ValueError("Telegram could not complete the request. Try again shortly.")
+    return payload.get("result")
+
+
+class _LocalSettings:
+    def __init__(self, path: Path) -> None:
         self._path = path
         self._lock = Lock()
-        self._pairing: tuple[str, float] | None = None
-        try:
-            settings = json.loads(path.read_text())
-        except FileNotFoundError:
-            settings = {}
-        except (OSError, ValueError):
-            raise ValueError("Could not read the local Telegram settings.") from None
-        if not isinstance(settings, dict):
-            raise ValueError("The local Telegram settings must be a JSON object.")
+        self._settings = read_settings(path)
+
+    def _save(self, settings: dict) -> None:
+        with NamedTemporaryFile(mode="w", dir=self._path.parent, prefix=".env.telegram.", delete=False) as target:
+            temporary_path = Path(target.name)
+            try:
+                json.dump(settings, target)
+                target.close()
+                temporary_path.replace(self._path)
+            finally:
+                temporary_path.unlink(missing_ok=True)
         self._settings = settings
+
+
+class TelegramLink(_LocalSettings):
+    def __init__(self, path: Path = OWNER_SETTINGS) -> None:
+        super().__init__(path)
+        self._pairing: tuple[str, float] | None = None
+
+    _request = staticmethod(telegram_request)
 
     def config(self) -> TelegramConfig | None:
         with self._lock:
@@ -109,37 +156,111 @@ class TelegramLink:
             raise ValueError("Link a Telegram chat first.")
         return TelegramSender(config).send_test()
 
-    def _save(self, settings: dict) -> None:
-        with NamedTemporaryFile(mode="w", dir=self._path.parent, prefix=".env.telegram.", delete=False) as target:
-            temporary_path = Path(target.name)
-            try:
-                json.dump(settings, target)
-                target.close()
-                temporary_path.replace(self._path)
-            finally:
-                temporary_path.unlink(missing_ok=True)
-        self._settings = settings
 
-    @staticmethod
-    def _request(token: str, method: str, body: dict):
-        connection = HTTPSConnection("api.telegram.org", timeout=7)
+class RelayTelegramLink(_LocalSettings):
+    """Pair with the shared bot using a grant scoped to one private chat."""
+
+    def __init__(self, url: str, path: Path = Path(".env.telegram-relay.json")) -> None:
+        super().__init__(path)
+        self._url = url.rstrip("/")
+        self._endpoint = urlsplit(self._url)
+        if (not self._endpoint.hostname or self._endpoint.username is not None
+                or self._endpoint.query or self._endpoint.fragment
+                or (self._endpoint.scheme != "https" and
+                    (self._endpoint.scheme != "http" or self._endpoint.hostname != "127.0.0.1"))):
+            raise ValueError("The shared Telegram relay needs an HTTPS address.")
+        if self._settings.get("relay") != self._url:
+            self._settings = {}
+        self._ticket = None
+
+    def status(self) -> dict:
+        with self._lock:
+            return {
+                "managed": True,
+                "linked": bool(self._settings.get("grant")),
+                "bot": self._settings.get("bot"),
+                "recipient": self._settings.get("recipient"),
+            }
+
+    def begin(self, _token: str = "") -> dict:
+        link = self._post("/link", {})
+        ticket = link.get("ticket")
+        if not isinstance(ticket, str) or not all(isinstance(link.get(key), str) for key in ("url", "command")):
+            raise ValueError("The shared bot returned an invalid link. Try again.")
+        with self._lock:
+            self._ticket = ticket
+        return {"url": link["url"], "command": link["command"]}
+
+    def finish(self) -> None:
+        with self._lock:
+            ticket = self._ticket
+        if not ticket:
+            raise ValueError("This link expired. Open a new Telegram link.")
+        paired = self._post("/finish", {"ticket": ticket})
+        if not all(isinstance(paired.get(key), str) and paired[key] for key in ("grant", "bot", "recipient")):
+            raise ValueError("The shared bot could not link this chat. Try again.")
+        with self._lock:
+            if ticket != self._ticket:
+                raise ValueError("This link expired. Open a new Telegram link.")
+            self._save({"relay": self._url, "grant": paired["grant"],
+                        "bot": paired["bot"], "recipient": paired["recipient"]})
+            self._ticket = None
+
+    def disconnect(self) -> None:
+        with self._lock:
+            self._save({})
+            self._ticket = None
+
+    def notify(self, incident: Incident) -> DeliveryResult:
+        if incident.source != DetectionSource.LIVE:
+            return FakeSender()(incident)
+        status = self._send("fall", incident_id=incident.incident_id)
+        return DeliveryResult(incident.incident_id, status)
+
+    def send_test(self) -> DeliveryStatus:
+        status = self._send("test")
+        if status == DeliveryStatus.SIMULATED:
+            raise ValueError("Link a Telegram chat first.")
+        return status
+
+    def _send(self, kind: str, **fields: str) -> DeliveryStatus:
+        with self._lock:
+            grant = self._settings.get("grant")
+        if not grant:
+            return DeliveryStatus.SIMULATED
         try:
-            connection.request("POST", f"/bot{token}/{method}", json.dumps(body).encode(),
+            result = self._post("/notify", {"grant": grant, "kind": kind, **fields})
+            return DeliveryStatus(result.get("status"))
+        except ValueError:
+            return DeliveryStatus.UNCERTAIN
+
+    def _post(self, path: str, body: dict) -> dict:
+        endpoint = self._endpoint
+        connection_type = HTTPSConnection if endpoint.scheme == "https" else HTTPConnection
+        connection = connection_type(endpoint.hostname, endpoint.port, timeout=10)
+        try:
+            connection.request("POST", endpoint.path + path, json.dumps(body).encode(),
                                {"Content-Type": "application/json"})
             response = connection.getresponse()
             status = response.status
-            payload = json.loads(response.read(1024 * 1024))
+            payload = json.loads(response.read(4096))
         except (HTTPException, OSError, ValueError):
-            raise ValueError("Could not reach Telegram. Check your connection and try again.") from None
+            raise ValueError("Could not reach the shared Telegram bot. Try again shortly.") from None
         finally:
             connection.close()
-        if status in (401, 404):
-            raise ValueError("Telegram rejected the bot token. Check it in BotFather.")
-        if status == 409:
-            raise ValueError("Another app is receiving this bot's messages. Use a dedicated bot to link here.")
-        if not isinstance(payload, dict) or payload.get("ok") is not True:
-            raise ValueError("Telegram could not complete the request. Try again shortly.")
-        return payload.get("result")
+        if not isinstance(payload, dict) or status != 200:
+            message = payload.get("error") if isinstance(payload, dict) else None
+            raise ValueError(message or "The shared Telegram bot is unavailable. Try again shortly.")
+        return payload
+
+
+def create_telegram_link() -> TelegramLink | RelayTelegramLink:
+    relay = os.environ.get("FALL_MONITOR_RELAY_URL", "").strip()
+    if not relay:
+        packaged_url = Path(__file__).with_name("relay-url.txt")
+        if packaged_url.is_file():
+            relay = packaged_url.read_text().strip()
+    return RelayTelegramLink(relay) if relay else TelegramLink()
 
 
 def telegram_config() -> TelegramConfig:

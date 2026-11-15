@@ -8,7 +8,7 @@ from threading import Lock, Thread
 
 from .device import Command, View, draw_pose
 from .notifier import DeliveryStatus
-from .telegram_link import TelegramLink
+from .telegram_link import RelayTelegramLink, TelegramLink
 
 _STATIC = Path(__file__).with_name("static")
 _ASSETS = {
@@ -20,7 +20,7 @@ _ASSETS = {
 
 
 class WebDevice:
-    def __init__(self, port: int, *, live: bool, countdown: float, telegram: TelegramLink | None):
+    def __init__(self, port: int, *, live: bool, countdown: float, telegram: TelegramLink | RelayTelegramLink | None):
         self.live = live
         self.countdown = countdown
         self.telegram = telegram

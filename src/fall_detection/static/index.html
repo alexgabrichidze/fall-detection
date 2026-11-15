@@ -98,7 +98,7 @@
       <h2 id="link-title">Connect Telegram</h2>
       <button id="close-link" class="icon-button" type="button" aria-label="Close Telegram setup">×</button>
     </div>
-    <form id="token-form">
+    <form id="token-form" hidden>
       <p>Enter your bot token from BotFather to create a link for the recipient.</p>
       <label for="bot-token">Bot token</label>
       <input id="bot-token" type="password" autocomplete="off" spellcheck="false" required>
@@ -111,7 +111,7 @@
         <button id="finish-link" class="button primary" type="button">Finish linking</button>
       </div>
       <details><summary>Enter the pairing code manually</summary><code id="pair-code"></code></details>
-      <button id="change-token" class="button quiet" type="button">Use a different bot</button>
+      <button id="change-token" class="button quiet" type="button" hidden>Use a different bot</button>
     </div>
     <p id="link-status" class="inline-result" role="status" hidden></p>
   </dialog>
