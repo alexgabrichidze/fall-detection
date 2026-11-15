@@ -1,10 +1,29 @@
-# Fall Detection Prototype
+# Safe&Sound
 
-Monitor one person with a webcam. A possible fall starts a spoken check-in and a 20-second response window. The app says “Ten seconds left” at the halfway point. Cancel locally or let the countdown expire to attempt one caregiver alert. The app says “Caregiver notified” when Telegram accepts the message. Video and pose landmarks stay in memory on the device. Detection and cancellation work offline after setup.
+Monitor one person with a webcam. A possible fall starts a spoken check-in and a 20-second response window. Tap **I'm okay** on screen or say **“I'm okay”** out loud when voice cancellation is enabled. Safe&Sound calls out ten seconds remaining, confirms cancellation, and announces whether the alert was sent. If the countdown expires, the linked caregiver receives a short, silent clip when available. Detection and cancellation work offline after setup.
 
-## Run in your browser
+## Use Safe&Sound on a phone
 
-Use Python 3.12 in a desktop session. The full project ZIP includes the fall model. For a Git checkout, download it once using the command in [models/README.md](models/README.md).
+Open [Safe&Sound](https://safe-n-sound.netlify.app) in Safari on iPhone or Chrome on Android. Tap **Start camera**, then allow camera access. Choose the front or rear camera before starting. To install it, use **Share → Add to Home Screen** in Safari or **Install app** in Chrome.
+
+The browser runs the fall model on that device. Keep the app open with the screen awake while monitoring. **Enable voice cancellation** downloads the offline speech model and asks for microphone access. The hosted app uses Netlify Functions to deliver Telegram alerts and receive caregiver replies.
+
+### Build and publish the browser version
+
+```bash
+npm ci --prefix web
+npm run --prefix web build
+```
+
+Deploy with the project's `netlify.toml` so Netlify publishes `web/dist` and `web/functions` together. In the site's production settings, add `TELEGRAM_BOT_TOKEN` as a secret and `TELEGRAM_BOT_USERNAME` as the bot username without the @. Include Functions if your plan offers scope selection. After deploying, register the HTTPS webhook with the same token in your local environment.
+
+```bash
+npm run --prefix web telegram:webhook -- https://your-site.netlify.app
+```
+
+## Run the desktop monitor in your browser
+
+Use Python 3.12 in a desktop session. The full project ZIP includes the fall model and the optional offline English speech model. For a Git checkout, download the fall model using the command in [models/README.md](models/README.md).
 
 From the project directory, with a webcam positioned to show the person and floor, run
 
@@ -42,48 +61,41 @@ The voice prompts play locally through the speakers. Use `--prompt PATH` to repl
 
 ## Optional offline voice cancellation
 
-Vosk recognizes **“I'm okay”** or **“I am okay”** locally. Enable it explicitly:
+Vosk recognizes **“I'm okay”** or **“I am okay”** locally. Install the voice extra and launch with `--voice`.
 
 ```bash
 python -m pip install -e '.[voice]'
-curl -fL https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip -o /tmp/fall-voice-model.zip
-python -m zipfile -e /tmp/fall-voice-model.zip models
 fall-detection --detector live --web --voice
 ```
 
-The model is already installed in this development checkout. Using its existing environment, run:
+For a Git checkout, download the offline model before starting voice mode.
 
 ```bash
-venv/bin/fall-detection --detector live --web --voice
+curl -fL https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip -o /tmp/fall-voice-model.zip
+python -m zipfile -e /tmp/fall-voice-model.zip models
 ```
 
-The [small English model](https://alphacephei.com/vosk/models) is Apache-2.0 licensed. Its download SHA-256 is `30f26242c4eb449f948e42cb302dd7a686cb29a3423a8367f99ff41780942498`. Keep the extracted directory outside Git. `--voice-model PATH` selects another local model directory. No network access is needed after installation.
+The [small English model](https://alphacephei.com/vosk/models) is Apache-2.0 licensed. Its download SHA-256 is `30f26242c4eb449f948e42cb302dd7a686cb29a3423a8367f99ff41780942498`. Keep the extracted directory outside Git. `--voice-model PATH` selects another local model directory. No network access is needed after installation. On macOS, the voice extra installs Vosk 0.3.44 for Apple Silicon support.
 
-The microphone opens after successful prompt playback and a 0.4-second echo guard, only while a response is pending. Listening pauses for the spoken countdown reminder and resumes after playback and the echo guard. Wait for **Microphone active** before speaking, then pause briefly so recognition can finish. Recognition uses a focused response vocabulary that includes negative phrases and unknown speech. Only a complete matching phrase (or repetitions of it) with every word confidence at least 0.8 cancels the incident; partial results, silence, and other recognized phrases do not. This threshold does not guarantee correct recognition. Button and keyboard cancellation remain available.
+The microphone opens after successful prompt playback and a 0.4-second echo guard, only while a response is pending. Listening pauses for the spoken countdown reminder and resumes after playback and the echo guard. Wait for **Microphone active** before saying “I'm okay,” then pause briefly so recognition can finish. The focused vocabulary includes negative phrases and unknown speech. Cancellation requires a complete matching phrase or repetitions of it, with mean word confidence of at least 0.65 and each word at least 0.45. Button and keyboard cancellation remain available.
 
 The **Voice response** row shows readiness, model loading, microphone activity, and failures. Input audio and recognized text remain in memory and are discarded. Listening stops on cancellation, countdown expiry, or exit. A failed prompt leaves voice capture off. A missing model or microphone failure leaves the countdown running. Simulation mode never opens the microphone.
 
-Use the system microphone by default, or pass `--microphone N` with a sounddevice input index. List devices with `venv/bin/python -m sounddevice`. On macOS, allow microphone access for Terminal or the launching app in **Privacy & Security → Microphone**. The microphone belongs to the Python process, not the browser.
+Use the system microphone by default, or pass `--microphone N` with a sounddevice input index. List devices with `python -m sounddevice`. On macOS, allow microphone access for Terminal or the launching app in **Privacy & Security → Microphone**. The Python process opens the microphone.
 
 Automated checks cover response filtering, playback gating, microphone cleanup/failure, stale incident results, manual cancellation, and expiry. The installed Vosk model loads and rejects the bundled prompt as a cancellation. A live spoken “I am okay” response through the HyperX system-default microphone was accepted using the focused response vocabulary. The previous unrestricted recognizer rejected the same response at the word-confidence threshold. This is one observed successful response, not a recognition accuracy estimate.
 
 ## Send real Telegram alerts
 
-Click **Connect Telegram** → **Open Telegram**. Tap **Start** from the Telegram account that should receive alerts, then return to the monitor and click **Finish linking**. The link expires after 10 minutes. Use **Send test message** to verify delivery to that chat. The demo connects to @falldetectionsuperbot through a temporary relay on the host Mac. The Mac and tunnel need to stay online.
+Click **Connect Telegram** → **Open Telegram**. Tap **Start** from the Telegram account that should receive alerts, then return to the monitor and click **Finish linking**. The link expires after 10 minutes. Use **Send test message** to verify delivery to that chat. The hosted app uses the bot configured on Netlify.
 
-### Set up the shared bot once
+While monitoring with a linked chat, the app keeps a rolling camera buffer in memory. An alert that goes out after the countdown includes up to 10 seconds before detection and 3 seconds after. The clip has no microphone audio. Cancelling during the countdown discards the clip without uploading it. If no clip is available, the app sends the alert as text.
 
-The owner runs the relay with the bot token on one computer. It reads `TELEGRAM_BOT_TOKEN` or the token in its existing private `.env.telegram.json` file. Run it from the project directory and put this relay behind an HTTPS proxy or tunnel.
+The caregiver can tap **Help is on the way** to play a spoken acknowledgment at the monitor or **False alarm** to announce the decision and rearm it automatically. On the hosted app, the first reply within 30 minutes applies to the alert. Netlify forwards the clip in memory and stores temporary pairing, delivery, and reply records. Browsers that record WebM send the clip as a Telegram file.
 
-```bash
-python -m fall_detection.telegram_relay
-```
+### Connect Telegram on a desktop install
 
-The relay listens on `127.0.0.1:8767`. To point the browser monitor at another relay, set `FALL_MONITOR_RELAY_URL` to its public HTTPS address at launch. To share a preconfigured copy, put that address in `src/fall_detection/relay-url.txt` before sharing the source or building the package. Each installation pairs its own Telegram recipient. A temporary tunnel address lasts for the tunnel session.
-
-### Use your own bot
-
-To set up a private bot in the browser monitor, remove `src/fall_detection/relay-url.txt` and launch the monitor without setting `FALL_MONITOR_RELAY_URL`. **Connect Telegram** then accepts a token from BotFather and saves it in the private local file `.env.telegram.json`. The native window can reuse that pairing using `fall-detection --detector live --telegram`. To configure the native window from environment variables, follow these steps.
+The desktop monitor communicates directly with Telegram. **Connect Telegram** accepts a token from BotFather and saves it in the private local file `.env.telegram.json`. Use a dedicated desktop bot for local pairing and reply buttons. Telegram delivers the hosted bot's incoming updates to its Netlify webhook. A desktop with an already configured chat can still send directly through that bot. The native window can reuse a saved pairing with `fall-detection --detector live --telegram` or use environment variables.
 
 1. Create a dedicated bot with [BotFather](https://t.me/BotFather).
 2. Have the intended recipient open the bot's private chat and send it one message. Find the numeric `message.chat.id` using [getUpdates](https://core.telegram.org/bots/api#getupdates).
@@ -103,7 +115,7 @@ export TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID
 fall-detection --detector live --telegram
 ```
 
-Alerts contain a possible-fall message and an incident ID. The app makes one attempt per incident. `telegram_accepted_no_acknowledgement` means Telegram accepted the message. `failed` means delivery was rejected or could not be started. `uncertain` means the app could not establish whether Telegram received it. Use the window to rearm after a delivery result.
+Alerts contain a possible-fall message and an incident ID. A rejected video upload falls back to text. `telegram_accepted_no_acknowledgement` means Telegram accepted the message. `failed` means delivery was rejected or could not be started. `uncertain` means the app could not establish whether Telegram received it. Check the linked chat after an uncertain result. Use the window to rearm manually after a delivery result.
 
 ## Demo without a camera
 
