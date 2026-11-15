@@ -21,6 +21,7 @@
   --warning: #faf1d9;
   --danger: #fbe8e3;
   --radius: 0;
+  --header-height: 56px;
   font: 16px/1.45 Geist, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
@@ -36,6 +37,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 }
 
 .shell { width: min(100% - 48px, 1920px); margin-inline: auto; }
+.topbar { background: var(--surface); border-bottom: 1px solid var(--line); }
+.topbar-content { min-height: var(--header-height); display: flex; align-items: center; }
+.brand { display: flex; align-items: center; gap: 9px; font-size: 1.25rem; font-weight: 700; letter-spacing: -.045em; }
+.brand-mark { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 9px; color: white; background: var(--green); --icon-background: var(--green); }
 .camera-actions { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
 .button {
   display: inline-flex;
@@ -74,21 +79,12 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .chip[data-tone='steady'] { color: var(--green-dark); background: var(--green-soft); }
 .chip[data-tone='warning'] { color: #704710; background: var(--warning); }
 
-.camera-input-controls { margin-bottom: 18px; }
-.camera-input-controls label { display: block; margin-bottom: 6px; font-size: .9rem; font-weight: 650; }
-.camera-input-row { display: flex; gap: 8px; align-items: center; }
-.camera-input-row select {
-  min-width: 0; flex: 1; min-height: 42px; padding: 8px 10px;
-  border: 1px solid var(--line); border-radius: 0; color: var(--ink); background: var(--surface);
-}
-.camera-input-row select:disabled { color: var(--muted); background: var(--neutral); }
-.camera-input-controls p { margin-top: 6px; font-size: .82rem; color: var(--muted); }
-
 .stage {
   position: relative;
   display: grid;
   place-items: center;
   isolation: isolate;
+  width: 100%;
   aspect-ratio: 4 / 3;
   min-height: 210px;
   overflow: hidden;
@@ -141,6 +137,9 @@ dd { font-weight: 650; }
 .telegram-actions .outline { flex: 1 0 auto; }
 .inline-result { margin-top: 12px; font-size: .92rem; color: var(--muted); }
 .inline-result[data-tone='error'] { color: #9d3829; }
+.privacy { display: flex; flex: none; align-items: flex-start; gap: 10px; color: var(--muted); font-size: .86rem; }
+.lock-icon { position: relative; flex: none; width: 16px; height: 12px; margin-top: 9px; border: 2px solid #315547; border-radius: 3px; }
+.lock-icon::before { content: ''; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); width: 9px; height: 8px; border: 2px solid #315547; border-bottom: 0; border-radius: 8px 8px 0 0; }
 
 dialog { width: min(100% - 32px, 465px); max-height: 90vh; padding: 23px; border: 1px solid var(--line); border-radius: 0; color: var(--ink); background: var(--surface); }
 dialog::backdrop { background: rgb(17 35 28 / 50%); }
@@ -160,6 +159,8 @@ details code { display: block; margin-top: 6px; padding: 7px 9px; overflow-wrap:
 .camera-icon { position: relative; display: inline-block; width: 1.08em; height: .81em; margin-top: .13em; border: .077em solid currentColor; border-radius: 0; }
 .camera-icon::before { content: ''; position: absolute; width: .44em; height: .18em; left: 50%; top: -.16em; transform: translateX(-50%); border: .077em solid currentColor; border-bottom: 0; border-radius: 0; background: var(--icon-background, white); }
 .camera-icon::after { content: ''; position: absolute; inset: 50% auto auto 50%; width: .48em; aspect-ratio: 1; border: .077em solid currentColor; border-radius: 50%; transform: translate(-50%, -50%); }
+.brand-mark .camera-icon { font-size: 20px; border-radius: .15em; }
+.brand-mark .camera-icon::before { border-radius: .1em .1em 0 0; }
 .plane-icon { display: inline-block; width: 1.18em; height: 1.18em; background: currentColor; clip-path: polygon(0 35%, 100% 0, 74% 96%, 48% 69%, 29% 86%, 30% 54%, 0 35%, 11% 38%, 35% 48%, 81% 18%, 44% 60%, 70% 82%, 90% 10%, 11% 38%); }
 .play-icon { display: inline-block; width: 14px; height: 16px; background: currentColor; clip-path: polygon(0 0, 100% 50%, 0 100%); }
 .play-icon.paused-shape { clip-path: polygon(0 0, 37% 0, 37% 100%, 0 100%, 0 0, 63% 0, 100% 0, 100% 100%, 63% 100%, 63% 0); }
@@ -228,7 +229,8 @@ details code { display: block; margin-top: 6px; padding: 7px 9px; overflow-wrap:
 
 /* Desktop workspace: all four panels fit the viewport at normal zoom. */
 @media (min-width: 881px) {
-  .shell { width: calc(100% - 28px); max-width: 1920px; height: 100dvh; padding-block: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .shell { width: min(100% - 28px, 1920px); }
+  .monitor-shell { height: calc(100dvh - var(--header-height) - 1px); padding-block: 14px; display: flex; flex-direction: column; gap: 10px; }
   .notice { flex: 0 0 auto; margin: 0; }
   .dashboard { flex: 1; min-height: 0; grid-template-columns: minmax(0, 1fr) minmax(360px, 520px); grid-template-rows: minmax(0, 1fr); grid-template-areas: 'camera rail'; gap: 12px; align-items: stretch; }
   .rail { grid-area: rail; display: flex; flex-direction: column; align-self: start; max-height: 100%; min-height: 0; overflow-y: auto; gap: 10px; }
@@ -241,11 +243,6 @@ details code { display: block; margin-top: 6px; padding: 7px 9px; overflow-wrap:
   .camera-actions { gap: 7px; }
   .camera-actions .button { min-height: 35px; padding: 7px 11px; font-size: .86rem; }
   .camera-actions .primary { min-width: 0; }
-  .camera-input-controls { flex: 1; min-width: 140px; max-width: 360px; margin: 0; }
-  .camera-input-controls label { font-size: .78rem; margin-bottom: 3px; }
-  .camera-input-row select { min-height: 33px; padding: 5px 9px; font-size: .86rem; }
-  .camera-input-row .button { min-height: 33px; padding-block: 5px; font-size: .82rem; }
-  .camera-input-controls p { font-size: .72rem; margin-top: 3px; }
   .video-space { flex: none; min-height: 0; aspect-ratio: auto; }
   .stage { flex: none; min-height: 0; aspect-ratio: auto; }
   .camera-status { flex: 0 0 auto; margin: 8px 2px 0; }
@@ -284,24 +281,25 @@ details code { display: block; margin-top: 6px; padding: 7px 9px; overflow-wrap:
 }
 /* Smaller screens retain readable controls and natural scrolling. */
 @media (max-width: 880px) {
-  .shell { width: calc(100% - 24px); padding-block: 12px; }
+  .shell { width: calc(100% - 24px); }
+  .monitor-shell { padding-block: 12px; }
   .dashboard { display: flex; flex-direction: column; gap: 12px; }
   .rail { display: contents; }
   .card { width: 100%; }
   .camera-heading { flex-wrap: wrap; }
   .camera-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-  .camera-input-controls { margin: 0; width: 100%; }
   .incident-card { order: 1; }
   .telegram-card { order: 2; }
   .camera-actions { flex-wrap: wrap; }
   .camera-actions .button { min-height: 36px; padding: 7px 10px; font-size: .84rem; }
   .camera-actions .primary { min-width: 0; }
   .notice { margin: 0 0 10px; }
+  .privacy { margin-block: 16px 8px; }
 }
 .camera-toolbar .play-icon { color: inherit; }
 
 .video-space { display: grid; place-items: center; min-width: 0; width: 100%; }
-.stage[data-playing='true'] { background: transparent; }
+.stage[data-playing='true'] { background: transparent; min-height: 0; }
 @media (max-width: 880px) {
   .video-space { aspect-ratio: 4 / 3; }
 }
@@ -341,9 +339,7 @@ details code { display: block; margin-top: 6px; padding: 7px 9px; overflow-wrap:
   .activity-scores li { padding: 1px 0; }
 }
 
-.voice-status { margin-top: 8px; color: var(--muted); font-size: .82rem; }
 @media (min-width: 881px) {
-  .voice-status { grid-column: 1 / -1; grid-row: 4; margin: 0; }
   .rail .card-heading h2 { font-size: 1.25rem; }
   .activity-current > strong { font-size: 1.15rem; }
   .activity-score-heading { font-size: .9rem; }
@@ -364,18 +360,10 @@ details code { display: block; margin-top: 6px; padding: 7px 9px; overflow-wrap:
 }
 
 /* Shared desktop/PWA controls retain the compact, square monitor layout. */
-.camera-start { border: 0; background: transparent; color: inherit; cursor: pointer; font: inherit; }
+.camera-start { position: absolute; inset: 0; width: 100%; max-width: none; place-content: center; padding: 12px; border: 0; background: transparent; color: inherit; cursor: pointer; font: inherit; }
+.camera-start:focus-visible { outline-offset: -4px; }
 .camera-start:disabled { cursor: default; }
 .camera-options { display: grid; gap: 10px; }
 .camera-options .button { justify-content: flex-start; text-align: left; }
-
-/* Small wordmark shares the existing activity header; no additional navbar. */
-.activity-heading-meta { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-.app-wordmark { color: var(--green); font-size: .76rem; font-weight: 700; letter-spacing: -.02em; white-space: nowrap; }
-.app-wordmark > span { color: var(--muted); font-weight: 500; }
-@media (max-width: 440px) {
-  .activity-heading-meta { gap: 8px; }
-  .app-wordmark { font-size: .7rem; }
-}
 
 .dashboard[data-announcing='true'] #cancel { grid-column: 1 / -1; }
