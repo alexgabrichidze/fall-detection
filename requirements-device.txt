@@ -1,8 +1,7 @@
-# Verified imports and simulated UI on Linux x86_64 / Python 3.14.10.
-# B's UI/audio environment only. A must reconcile the inference stack separately.
+# For the simulation UI on Python 3.14. Use the detection extra on Python 3.12 for live mode.
 # Install with: python -m pip install -c requirements-device.txt -e '.[ui,audio]'
 numpy==2.5.4
-opencv-python==4.14.0.94
+opencv-contrib-python==4.14.0.94
 sounddevice==0.5.6
 cffi==2.1.1
 pycparser==3.12

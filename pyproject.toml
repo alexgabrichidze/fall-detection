@@ -10,16 +10,17 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = []
 
-# Optional, not yet verified together. The simulation needs none of these.
+# Live pins keep the same Pose extraction API as the upstream training code.
 [project.optional-dependencies]
 detection = [
-    "numpy>=1.26,<3",
-    "opencv-python>=4.8,<5",
-    "mediapipe>=0.10.21,<2",
-    "ai-edge-litert>=1.2,<3",
+    "numpy==1.26.4",
+    "opencv-contrib-python==4.11.0.86",
+    "mediapipe==0.10.21",
+    "ai-edge-litert==2.3.0",
+    "pyobjc-framework-AVFoundation==12.2.2; sys_platform == 'darwin'",
 ]
-ui = ["numpy>=1.26,<3", "opencv-python>=4.8,<5"]
-audio = ["numpy>=1.26,<3", "sounddevice>=0.5,<1"]
+ui = ["numpy>=1.26,<3", "opencv-contrib-python>=4.8,<5"]
+audio = ["numpy>=1.26,<3", "sounddevice==0.5.6"]
 voice = ["vosk>=0.3.45,<0.4", "sounddevice>=0.5,<1"]
 
 [project.scripts]
@@ -27,4 +28,7 @@ fall-detection = "fall_detection.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+fall_detection = ["static/*"]
 
