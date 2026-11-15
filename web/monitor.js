@@ -52,6 +52,7 @@ export class BrowserMonitor {
       return { ...this.view, activity: this.activity.snapshot(performance.now() / 1000), telegram: this.telegram.status,
         audio: this.audio.status, voice: this.voice?.status || 'Disabled',
         voiceEnabled: Boolean(this.voice?.enabled), listening: this.voice?.listening || false,
+        voiceIssue: this.voiceIssue,
         remaining: this.view.incident === 'awaiting_response' ? Math.max(0, this.deadline - Date.now()) / 1000 : null };
     }
     if (path === '/api/cameras') return this.cameraInputs();
@@ -76,21 +77,19 @@ export class BrowserMonitor {
     return { cameras, selected: this.view.cameraInput };
   }
 
-  async toggleVoice() {
-    if (this.voiceBusy) return this.voice?.enabled || false;
+  async enableVoice() {
+    if (this.voice?.enabled || this.voiceBusy) return;
     this.voiceBusy = true;
+    this.voiceIssue = null;
     try {
-      if (this.voice?.enabled) {
-        this.voice.stop();
-        this.voice.enabled = false;
-        this.voice.status = 'Disabled';
-      } else {
-        await this.audio.unlock();
-        const { Voice } = await import('./voice.js');
-        this.voice ??= new Voice();
-        await this.voice.enable(this.audio.context);
-      }
-      return this.voice.enabled;
+      const { Voice } = await import('./voice.js');
+      if (!this.stream) return;
+      this.voice ??= new Voice();
+      await this.voice.enable(this.audio.context);
+    } catch (error) {
+      this.voiceIssue = error.name === 'NotAllowedError'
+        ? 'Allow microphone access in your browser settings to cancel by voice.'
+        : 'Voice cancellation is unavailable. Use the on-screen button to cancel.';
     } finally {
       this.voiceBusy = false;
     }
@@ -149,6 +148,7 @@ export class BrowserMonitor {
       this.view.fault = 'browser_camera_unavailable';
     });
     this.keepAwake();
+    this.enableVoice();
     this.syncRecording();
     try {
       this.detector ??= await import('./detector.js').then(module => module.loadDetector());
