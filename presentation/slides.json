@@ -1,0 +1,2601 @@
+[
+  {
+    "name": "01 / Fall detection",
+    "background": "142522",
+    "elements": [
+      {
+        "type": "text",
+        "text": "SCIENCE FAIR / HACKATHON",
+        "x": 96,
+        "y": 84,
+        "w": 1200,
+        "h": 31.98,
+        "size": 26,
+        "color": "B8F3D2",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "stack",
+        "x": 90,
+        "y": 250,
+        "w": 1050,
+        "h": 465.41999999999996,
+        "children": [
+          {
+            "type": "text",
+            "text": "FALL\nDETECTION",
+            "x": 0,
+            "y": 0,
+            "w": 1050,
+            "h": 378.84,
+            "size": 154,
+            "color": "F5F2E9",
+            "font": "Space Grotesk",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Local vision. A human response.",
+            "x": 0,
+            "y": 0,
+            "w": 1050,
+            "h": 56.58,
+            "size": 46,
+            "color": "DCE8E1",
+            "font": "DM Sans",
+            "bold": false
+          }
+        ],
+        "gap": 30,
+        "padding": 0,
+        "color": null
+      },
+      {
+        "type": "text",
+        "text": "A privacy-first desktop prototype",
+        "x": 98,
+        "y": 824,
+        "w": 1050,
+        "h": 46.74,
+        "size": 38,
+        "color": "DCE8E1",
+        "font": "DM Sans",
+        "bold": false
+      },
+      {
+        "type": "rect",
+        "x": 1230,
+        "y": 150,
+        "w": 570,
+        "h": 740,
+        "color": "213A34",
+        "radius": 18
+      },
+      {
+        "type": "line",
+        "x": 1270,
+        "y": 190,
+        "x2": 1324,
+        "y2": 190,
+        "color": "B8F3D2",
+        "thickness": 4
+      },
+      {
+        "type": "line",
+        "x": 1270,
+        "y": 190,
+        "x2": 1270,
+        "y2": 244,
+        "color": "B8F3D2",
+        "thickness": 4
+      },
+      {
+        "type": "line",
+        "x": 1706,
+        "y": 190,
+        "x2": 1760,
+        "y2": 190,
+        "color": "B8F3D2",
+        "thickness": 4
+      },
+      {
+        "type": "line",
+        "x": 1760,
+        "y": 190,
+        "x2": 1760,
+        "y2": 244,
+        "color": "B8F3D2",
+        "thickness": 4
+      },
+      {
+        "type": "line",
+        "x": 1270,
+        "y": 796,
+        "x2": 1270,
+        "y2": 850,
+        "color": "B8F3D2",
+        "thickness": 4
+      },
+      {
+        "type": "line",
+        "x": 1270,
+        "y": 850,
+        "x2": 1324,
+        "y2": 850,
+        "color": "B8F3D2",
+        "thickness": 4
+      },
+      {
+        "type": "line",
+        "x": 1706,
+        "y": 850,
+        "x2": 1760,
+        "y2": 850,
+        "color": "B8F3D2",
+        "thickness": 4
+      },
+      {
+        "type": "line",
+        "x": 1760,
+        "y": 796,
+        "x2": 1760,
+        "y2": 850,
+        "color": "B8F3D2",
+        "thickness": 4
+      },
+      {
+        "type": "line",
+        "x": 1435,
+        "y": 390,
+        "x2": 1580,
+        "y2": 390,
+        "color": "B8F3D2",
+        "thickness": 7
+      },
+      {
+        "type": "line",
+        "x": 1435,
+        "y": 390,
+        "x2": 1360,
+        "y2": 505,
+        "color": "B8F3D2",
+        "thickness": 7
+      },
+      {
+        "type": "line",
+        "x": 1580,
+        "y": 390,
+        "x2": 1650,
+        "y2": 485,
+        "color": "B8F3D2",
+        "thickness": 7
+      },
+      {
+        "type": "line",
+        "x": 1435,
+        "y": 390,
+        "x2": 1410,
+        "y2": 610,
+        "color": "B8F3D2",
+        "thickness": 7
+      },
+      {
+        "type": "line",
+        "x": 1580,
+        "y": 390,
+        "x2": 1590,
+        "y2": 610,
+        "color": "B8F3D2",
+        "thickness": 7
+      },
+      {
+        "type": "line",
+        "x": 1410,
+        "y": 610,
+        "x2": 1590,
+        "y2": 610,
+        "color": "B8F3D2",
+        "thickness": 7
+      },
+      {
+        "type": "line",
+        "x": 1410,
+        "y": 610,
+        "x2": 1370,
+        "y2": 745,
+        "color": "B8F3D2",
+        "thickness": 7
+      },
+      {
+        "type": "line",
+        "x": 1590,
+        "y": 610,
+        "x2": 1630,
+        "y2": 745,
+        "color": "B8F3D2",
+        "thickness": 7
+      },
+      {
+        "type": "ellipse",
+        "x": 1496,
+        "y": 281,
+        "w": 18,
+        "h": 18,
+        "color": "F5F2E9"
+      },
+      {
+        "type": "ellipse",
+        "x": 1426,
+        "y": 381,
+        "w": 18,
+        "h": 18,
+        "color": "F5F2E9"
+      },
+      {
+        "type": "ellipse",
+        "x": 1571,
+        "y": 381,
+        "w": 18,
+        "h": 18,
+        "color": "F5F2E9"
+      },
+      {
+        "type": "ellipse",
+        "x": 1351,
+        "y": 496,
+        "w": 18,
+        "h": 18,
+        "color": "F5F2E9"
+      },
+      {
+        "type": "ellipse",
+        "x": 1641,
+        "y": 476,
+        "w": 18,
+        "h": 18,
+        "color": "F5F2E9"
+      },
+      {
+        "type": "ellipse",
+        "x": 1401,
+        "y": 601,
+        "w": 18,
+        "h": 18,
+        "color": "F5F2E9"
+      },
+      {
+        "type": "ellipse",
+        "x": 1581,
+        "y": 601,
+        "w": 18,
+        "h": 18,
+        "color": "F5F2E9"
+      },
+      {
+        "type": "ellipse",
+        "x": 1361,
+        "y": 736,
+        "w": 18,
+        "h": 18,
+        "color": "F5F2E9"
+      },
+      {
+        "type": "ellipse",
+        "x": 1621,
+        "y": 736,
+        "w": 18,
+        "h": 18,
+        "color": "F5F2E9"
+      },
+      {
+        "type": "text",
+        "text": "POSE LANDMARKS",
+        "x": 1330,
+        "y": 785,
+        "w": 380,
+        "h": 29.52,
+        "size": 24,
+        "color": "B8F3D2",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "text",
+        "text": "Concept schematic",
+        "x": 1325,
+        "y": 913,
+        "w": 450,
+        "h": 29.52,
+        "size": 24,
+        "color": "DCE8E1",
+        "font": "DM Sans",
+        "bold": false
+      },
+      {
+        "type": "text",
+        "text": "FALL DETECTION  /  EXPERIMENTAL PROTOTYPE",
+        "x": 90,
+        "y": 1018,
+        "w": 1500,
+        "h": 24.6,
+        "size": 20,
+        "color": "DCE8E1",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "text",
+        "text": "01 / 10",
+        "x": 1700,
+        "y": 1018,
+        "w": 160,
+        "h": 24.6,
+        "size": 20,
+        "color": "DCE8E1",
+        "font": "DM Sans",
+        "bold": false
+      }
+    ],
+    "notes": "Introduce this as an experimental computer-based prototype. The intent is to detect a possible fall locally, ask whether the person is okay, and notify one caregiver after a response window. The application workflow is implemented and tested with simulated inputs. Live model integration is pending. The drawing is a conceptual landmark diagram, not model evidence."
+  },
+  {
+    "name": "02 / Research question",
+    "background": "F5F2E9",
+    "elements": [
+      {
+        "type": "text",
+        "text": "01  /  THE QUESTION",
+        "x": 96,
+        "y": 82,
+        "w": 1400,
+        "h": 31.98,
+        "size": 26,
+        "color": "52675F",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "text",
+        "text": "What happens\nafter a possible fall?",
+        "x": 90,
+        "y": 190,
+        "w": 1660,
+        "h": 275.52,
+        "size": 112,
+        "color": "182D27",
+        "font": "Space Grotesk",
+        "bold": true
+      },
+      {
+        "type": "text",
+        "text": "Can a webcam start a useful response workflow\nwhile keeping video on the computer?",
+        "x": 98,
+        "y": 515,
+        "w": 1550,
+        "h": 113.16,
+        "size": 46,
+        "color": "52675F",
+        "font": "DM Sans",
+        "bold": false
+      },
+      {
+        "type": "line",
+        "x": 100,
+        "y": 760,
+        "x2": 1800,
+        "y2": 760,
+        "color": "182D27",
+        "thickness": 3
+      },
+      {
+        "type": "ellipse",
+        "x": 100,
+        "y": 744,
+        "w": 32,
+        "h": 32,
+        "color": "182D27"
+      },
+      {
+        "type": "stack",
+        "x": 100,
+        "y": 810,
+        "w": 510,
+        "h": 200.1,
+        "children": [
+          {
+            "type": "text",
+            "text": "01",
+            "x": 0,
+            "y": 0,
+            "w": 510,
+            "h": 29.52,
+            "size": 24,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Notice",
+            "x": 0,
+            "y": 0,
+            "w": 510,
+            "h": 56.58,
+            "size": 46,
+            "color": "182D27",
+            "font": "Space Grotesk",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Recognize possible fall evidence.",
+            "x": 0,
+            "y": 0,
+            "w": 510,
+            "h": 90,
+            "size": 32,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": false
+          }
+        ],
+        "gap": 12,
+        "padding": 0,
+        "color": null
+      },
+      {
+        "type": "ellipse",
+        "x": 690,
+        "y": 744,
+        "w": 32,
+        "h": 32,
+        "color": "182D27"
+      },
+      {
+        "type": "stack",
+        "x": 690,
+        "y": 810,
+        "w": 510,
+        "h": 200.1,
+        "children": [
+          {
+            "type": "text",
+            "text": "02",
+            "x": 0,
+            "y": 0,
+            "w": 510,
+            "h": 29.52,
+            "size": 24,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Check in",
+            "x": 0,
+            "y": 0,
+            "w": 510,
+            "h": 56.58,
+            "size": 46,
+            "color": "182D27",
+            "font": "Space Grotesk",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Give the person a way to cancel.",
+            "x": 0,
+            "y": 0,
+            "w": 510,
+            "h": 90,
+            "size": 32,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": false
+          }
+        ],
+        "gap": 12,
+        "padding": 0,
+        "color": null
+      },
+      {
+        "type": "ellipse",
+        "x": 1280,
+        "y": 744,
+        "w": 32,
+        "h": 32,
+        "color": "182D27"
+      },
+      {
+        "type": "stack",
+        "x": 1280,
+        "y": 810,
+        "w": 510,
+        "h": 200.1,
+        "children": [
+          {
+            "type": "text",
+            "text": "03",
+            "x": 0,
+            "y": 0,
+            "w": 510,
+            "h": 29.52,
+            "size": 24,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Reach out",
+            "x": 0,
+            "y": 0,
+            "w": 510,
+            "h": 56.58,
+            "size": 46,
+            "color": "182D27",
+            "font": "Space Grotesk",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Notify one caregiver if time expires.",
+            "x": 0,
+            "y": 0,
+            "w": 510,
+            "h": 90,
+            "size": 32,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": false
+          }
+        ],
+        "gap": 12,
+        "padding": 0,
+        "color": null
+      },
+      {
+        "type": "text",
+        "text": "FALL DETECTION  /  EXPERIMENTAL PROTOTYPE",
+        "x": 90,
+        "y": 1018,
+        "w": 1500,
+        "h": 24.6,
+        "size": 20,
+        "color": "52675F",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "text",
+        "text": "02 / 10",
+        "x": 1700,
+        "y": 1018,
+        "w": 160,
+        "h": 24.6,
+        "size": 20,
+        "color": "52675F",
+        "font": "DM Sans",
+        "bold": false
+      }
+    ],
+    "notes": "Frame the engineering question rather than citing unverified medical statistics. Detection alone is only one part of the system. The response workflow must handle uncertainty, let a person cancel, and show whether a message was accepted. Hypothesis: local vision can be combined with a deterministic response workflow; detection performance still needs evaluation."
+  },
+  {
+    "name": "03 / Intended response flow",
+    "background": "142522",
+    "elements": [
+      {
+        "type": "text",
+        "text": "02  /  THE COMPLETE FLOW",
+        "x": 96,
+        "y": 82,
+        "w": 1450,
+        "h": 31.98,
+        "size": 26,
+        "color": "B8F3D2",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "text",
+        "text": "Detect. Ask. Allow a response.",
+        "x": 90,
+        "y": 185,
+        "w": 1730,
+        "h": 118.08,
+        "size": 96,
+        "color": "F5F2E9",
+        "font": "Space Grotesk",
+        "bold": true
+      },
+      {
+        "type": "text",
+        "text": "Intended end-to-end behavior",
+        "x": 98,
+        "y": 330,
+        "w": 1500,
+        "h": 44.28,
+        "size": 36,
+        "color": "DCE8E1",
+        "font": "DM Sans",
+        "bold": false
+      },
+      {
+        "type": "stack",
+        "x": 96,
+        "y": 470,
+        "w": 390,
+        "h": 330,
+        "children": [
+          {
+            "type": "text",
+            "text": "01",
+            "x": 28,
+            "y": 28,
+            "w": 334,
+            "h": 36.9,
+            "size": 30,
+            "color": "B8F3D2",
+            "font": "DM Sans",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Possible fall",
+            "x": 28,
+            "y": 28,
+            "w": 334,
+            "h": 110,
+            "size": 44,
+            "color": "F5F2E9",
+            "font": "Space Grotesk",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Local vision evidence",
+            "x": 28,
+            "y": 28,
+            "w": 334,
+            "h": 90,
+            "size": 32,
+            "color": "DCE8E1",
+            "font": "DM Sans",
+            "bold": false
+          }
+        ],
+        "gap": 15,
+        "padding": 28,
+        "color": "213A34"
+      },
+      {
+        "type": "line",
+        "x": 491,
+        "y": 633,
+        "x2": 536,
+        "y2": 633,
+        "color": "B8F3D2",
+        "thickness": 4
+      },
+      {
+        "type": "stack",
+        "x": 546,
+        "y": 470,
+        "w": 390,
+        "h": 330,
+        "children": [
+          {
+            "type": "text",
+            "text": "02",
+            "x": 28,
+            "y": 28,
+            "w": 334,
+            "h": 36.9,
+            "size": 30,
+            "color": "B8F3D2",
+            "font": "DM Sans",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "“Are you okay?”",
+            "x": 28,
+            "y": 28,
+            "w": 334,
+            "h": 110,
+            "size": 44,
+            "color": "F5F2E9",
+            "font": "Space Grotesk",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Play one recorded prompt",
+            "x": 28,
+            "y": 28,
+            "w": 334,
+            "h": 90,
+            "size": 32,
+            "color": "DCE8E1",
+            "font": "DM Sans",
+            "bold": false
+          }
+        ],
+        "gap": 15,
+        "padding": 28,
+        "color": "213A34"
+      },
+      {
+        "type": "line",
+        "x": 941,
+        "y": 633,
+        "x2": 986,
+        "y2": 633,
+        "color": "B8F3D2",
+        "thickness": 4
+      },
+      {
+        "type": "stack",
+        "x": 996,
+        "y": 470,
+        "w": 390,
+        "h": 330,
+        "children": [
+          {
+            "type": "text",
+            "text": "03",
+            "x": 28,
+            "y": 28,
+            "w": 334,
+            "h": 36.9,
+            "size": 30,
+            "color": "B8F3D2",
+            "font": "DM Sans",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Response window",
+            "x": 28,
+            "y": 28,
+            "w": 334,
+            "h": 110,
+            "size": 44,
+            "color": "F5F2E9",
+            "font": "Space Grotesk",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "20-second default countdown",
+            "x": 28,
+            "y": 28,
+            "w": 334,
+            "h": 90,
+            "size": 32,
+            "color": "DCE8E1",
+            "font": "DM Sans",
+            "bold": false
+          }
+        ],
+        "gap": 15,
+        "padding": 28,
+        "color": "213A34"
+      },
+      {
+        "type": "line",
+        "x": 1391,
+        "y": 633,
+        "x2": 1436,
+        "y2": 633,
+        "color": "B8F3D2",
+        "thickness": 4
+      },
+      {
+        "type": "stack",
+        "x": 1446,
+        "y": 470,
+        "w": 390,
+        "h": 330,
+        "children": [
+          {
+            "type": "text",
+            "text": "04",
+            "x": 28,
+            "y": 28,
+            "w": 334,
+            "h": 36.9,
+            "size": 30,
+            "color": "B8F3D2",
+            "font": "DM Sans",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Caregiver alert",
+            "x": 28,
+            "y": 28,
+            "w": 334,
+            "h": 110,
+            "size": 44,
+            "color": "F5F2E9",
+            "font": "Space Grotesk",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "One text-only attempt",
+            "x": 28,
+            "y": 28,
+            "w": 334,
+            "h": 90,
+            "size": 32,
+            "color": "DCE8E1",
+            "font": "DM Sans",
+            "bold": false
+          }
+        ],
+        "gap": 15,
+        "padding": 28,
+        "color": "213A34"
+      },
+      {
+        "type": "line",
+        "x": 1190,
+        "y": 806,
+        "x2": 1190,
+        "y2": 880,
+        "color": "B8F3D2",
+        "thickness": 4
+      },
+      {
+        "type": "text",
+        "text": "CANCELLED",
+        "x": 980,
+        "y": 895,
+        "w": 450,
+        "h": 36.9,
+        "size": 30,
+        "color": "B8F3D2",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "text",
+        "text": "Button or keyboard. No alert for a cancelled incident.",
+        "x": 96,
+        "y": 950,
+        "w": 1680,
+        "h": 39.36,
+        "size": 32,
+        "color": "DCE8E1",
+        "font": "DM Sans",
+        "bold": false
+      },
+      {
+        "type": "text",
+        "text": "FALL DETECTION  /  EXPERIMENTAL PROTOTYPE",
+        "x": 90,
+        "y": 1018,
+        "w": 1500,
+        "h": 24.6,
+        "size": 20,
+        "color": "DCE8E1",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "text",
+        "text": "03 / 10",
+        "x": 1700,
+        "y": 1018,
+        "w": 160,
+        "h": 24.6,
+        "size": 20,
+        "color": "DCE8E1",
+        "font": "DM Sans",
+        "bold": false
+      }
+    ],
+    "notes": "Walk from left to right. This is the intended complete flow, not a claim that live detection is already working. Twenty seconds is a configurable prototype default, not a validated clinical timing recommendation. Cancellation must occur before expiry. Telegram accepting a message does not mean the caregiver has responded. Voice cancellation is optional future work."
+  },
+  {
+    "name": "04 / Privacy boundary",
+    "background": "F5F2E9",
+    "elements": [
+      {
+        "type": "text",
+        "text": "03  /  PRIVACY BY DESIGN",
+        "x": 96,
+        "y": 82,
+        "w": 1400,
+        "h": 31.98,
+        "size": 26,
+        "color": "52675F",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "text",
+        "text": "Video stays here.",
+        "x": 90,
+        "y": 185,
+        "w": 1540,
+        "h": 132.84,
+        "size": 108,
+        "color": "182D27",
+        "font": "Space Grotesk",
+        "bold": true
+      },
+      {
+        "type": "rect",
+        "x": 96,
+        "y": 385,
+        "w": 1190,
+        "h": 465,
+        "color": "E5EADF",
+        "radius": 20
+      },
+      {
+        "type": "text",
+        "text": "ON THE COMPUTER",
+        "x": 140,
+        "y": 420,
+        "w": 1000,
+        "h": 31.98,
+        "size": 26,
+        "color": "52675F",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "stack",
+        "x": 140,
+        "y": 505,
+        "w": 1050,
+        "h": 206.06,
+        "children": [
+          {
+            "type": "text",
+            "text": "Webcam + pose + fall model",
+            "x": 0,
+            "y": 0,
+            "w": 1050,
+            "h": 59.04,
+            "size": 48,
+            "color": "182D27",
+            "font": "Space Grotesk",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Safety state, countdown, local controls",
+            "x": 0,
+            "y": 0,
+            "w": 1050,
+            "h": 46.74,
+            "size": 38,
+            "color": "182D27",
+            "font": "DM Sans",
+            "bold": false
+          },
+          {
+            "type": "text",
+            "text": "Frames discarded after processing",
+            "x": 0,
+            "y": 0,
+            "w": 1050,
+            "h": 44.28,
+            "size": 36,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": false
+          }
+        ],
+        "gap": 28,
+        "padding": 0,
+        "color": null
+      },
+      {
+        "type": "line",
+        "x": 1290,
+        "y": 610,
+        "x2": 1435,
+        "y2": 610,
+        "color": "182D27",
+        "thickness": 5
+      },
+      {
+        "type": "stack",
+        "x": 1460,
+        "y": 460,
+        "w": 360,
+        "h": 251.56,
+        "children": [
+          {
+            "type": "text",
+            "text": "TELEGRAM",
+            "x": 0,
+            "y": 0,
+            "w": 360,
+            "h": 31.98,
+            "size": 26,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "One\ncaregiver",
+            "x": 0,
+            "y": 0,
+            "w": 360,
+            "h": 137.76,
+            "size": 56,
+            "color": "182D27",
+            "font": "Space Grotesk",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Alert text only",
+            "x": 0,
+            "y": 0,
+            "w": 360,
+            "h": 41.82,
+            "size": 34,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": false
+          }
+        ],
+        "gap": 20,
+        "padding": 0,
+        "color": null
+      },
+      {
+        "type": "text",
+        "text": "No saved video or captured microphone recordings.",
+        "x": 98,
+        "y": 900,
+        "w": 1650,
+        "h": 45.51,
+        "size": 37,
+        "color": "182D27",
+        "font": "DM Sans",
+        "bold": false
+      },
+      {
+        "type": "line",
+        "x": 116,
+        "y": 405,
+        "x2": 148,
+        "y2": 405,
+        "color": "52675F",
+        "thickness": 4
+      },
+      {
+        "type": "line",
+        "x": 116,
+        "y": 405,
+        "x2": 116,
+        "y2": 437,
+        "color": "52675F",
+        "thickness": 4
+      },
+      {
+        "type": "line",
+        "x": 1234,
+        "y": 405,
+        "x2": 1266,
+        "y2": 405,
+        "color": "52675F",
+        "thickness": 4
+      },
+      {
+        "type": "line",
+        "x": 1266,
+        "y": 405,
+        "x2": 1266,
+        "y2": 437,
+        "color": "52675F",
+        "thickness": 4
+      },
+      {
+        "type": "line",
+        "x": 116,
+        "y": 798,
+        "x2": 116,
+        "y2": 830,
+        "color": "52675F",
+        "thickness": 4
+      },
+      {
+        "type": "line",
+        "x": 116,
+        "y": 830,
+        "x2": 148,
+        "y2": 830,
+        "color": "52675F",
+        "thickness": 4
+      },
+      {
+        "type": "line",
+        "x": 1234,
+        "y": 830,
+        "x2": 1266,
+        "y2": 830,
+        "color": "52675F",
+        "thickness": 4
+      },
+      {
+        "type": "line",
+        "x": 1266,
+        "y": 798,
+        "x2": 1266,
+        "y2": 830,
+        "color": "52675F",
+        "thickness": 4
+      },
+      {
+        "type": "text",
+        "text": "FALL DETECTION  /  EXPERIMENTAL PROTOTYPE",
+        "x": 90,
+        "y": 1018,
+        "w": 1500,
+        "h": 24.6,
+        "size": 20,
+        "color": "52675F",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "text",
+        "text": "04 / 10",
+        "x": 1700,
+        "y": 1018,
+        "w": 160,
+        "h": 24.6,
+        "size": 20,
+        "color": "52675F",
+        "font": "DM Sans",
+        "bold": false
+      }
+    ],
+    "notes": "Describe the target architecture. Frames and pose landmarks are local, transient data. The microphone is not used in the current version. Telegram requires internet access and receives only necessary alert text. Camera capture and local inference are A's pending integration work. There is no database or persistent alert history. This is not a claim that Telegram is a local service."
+  },
+  {
+    "name": "05 / Model verification gate",
+    "background": "F5F2E9",
+    "elements": [
+      {
+        "type": "text",
+        "text": "04  /  VISION ENGINEERING",
+        "x": 96,
+        "y": 82,
+        "w": 1400,
+        "h": 31.98,
+        "size": 26,
+        "color": "52675F",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "text",
+        "text": "Pretrained does not\nmean plug-and-play.",
+        "x": 90,
+        "y": 180,
+        "w": 1680,
+        "h": 241.07999999999998,
+        "size": 98,
+        "color": "182D27",
+        "font": "Space Grotesk",
+        "bold": true
+      },
+      {
+        "type": "text",
+        "text": "01",
+        "x": 100,
+        "y": 475,
+        "w": 110,
+        "h": 51.66,
+        "size": 42,
+        "color": "52675F",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "stack",
+        "x": 245,
+        "y": 475,
+        "w": 690,
+        "h": 101.47999999999999,
+        "children": [
+          {
+            "type": "text",
+            "text": "OpenCV",
+            "x": 0,
+            "y": 0,
+            "w": 690,
+            "h": 54.12,
+            "size": 44,
+            "color": "182D27",
+            "font": "Space Grotesk",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Capture timestamped frames",
+            "x": 0,
+            "y": 0,
+            "w": 690,
+            "h": 39.36,
+            "size": 32,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": false
+          }
+        ],
+        "gap": 8,
+        "padding": 0,
+        "color": null
+      },
+      {
+        "type": "line",
+        "x": 150,
+        "y": 540,
+        "x2": 150,
+        "y2": 605,
+        "color": "52675F",
+        "thickness": 3
+      },
+      {
+        "type": "text",
+        "text": "02",
+        "x": 100,
+        "y": 623,
+        "w": 110,
+        "h": 51.66,
+        "size": 42,
+        "color": "52675F",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "stack",
+        "x": 245,
+        "y": 623,
+        "w": 690,
+        "h": 101.47999999999999,
+        "children": [
+          {
+            "type": "text",
+            "text": "MediaPipe Pose",
+            "x": 0,
+            "y": 0,
+            "w": 690,
+            "h": 54.12,
+            "size": 44,
+            "color": "182D27",
+            "font": "Space Grotesk",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Extract body landmarks",
+            "x": 0,
+            "y": 0,
+            "w": 690,
+            "h": 39.36,
+            "size": 32,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": false
+          }
+        ],
+        "gap": 8,
+        "padding": 0,
+        "color": null
+      },
+      {
+        "type": "line",
+        "x": 150,
+        "y": 688,
+        "x2": 150,
+        "y2": 753,
+        "color": "52675F",
+        "thickness": 3
+      },
+      {
+        "type": "text",
+        "text": "03",
+        "x": 100,
+        "y": 771,
+        "w": 110,
+        "h": 51.66,
+        "size": 42,
+        "color": "52675F",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "stack",
+        "x": 245,
+        "y": 771,
+        "w": 690,
+        "h": 101.47999999999999,
+        "children": [
+          {
+            "type": "text",
+            "text": "Transformer + LiteRT",
+            "x": 0,
+            "y": 0,
+            "w": 690,
+            "h": 54.12,
+            "size": 44,
+            "color": "182D27",
+            "font": "Space Grotesk",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Evaluate a verified input sequence",
+            "x": 0,
+            "y": 0,
+            "w": 690,
+            "h": 39.36,
+            "size": 32,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": false
+          }
+        ],
+        "gap": 8,
+        "padding": 0,
+        "color": null
+      },
+      {
+        "type": "stack",
+        "x": 1060,
+        "y": 475,
+        "w": 745,
+        "h": 440,
+        "children": [
+          {
+            "type": "text",
+            "text": "LIVE DETECTION: PENDING",
+            "x": 40,
+            "y": 40,
+            "w": 665,
+            "h": 31.98,
+            "size": 26,
+            "color": "182D27",
+            "font": "DM Sans",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Verify the\nmodel’s inputs.",
+            "x": 40,
+            "y": 40,
+            "w": 665,
+            "h": 157.44,
+            "size": 64,
+            "color": "182D27",
+            "font": "Space Grotesk",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Landmark order · coordinates\nnormalization · timing · sequence length",
+            "x": 40,
+            "y": 40,
+            "w": 665,
+            "h": 100,
+            "size": 34,
+            "color": "182D27",
+            "font": "DM Sans",
+            "bold": false
+          }
+        ],
+        "gap": 24,
+        "padding": 40,
+        "color": "DD916D"
+      },
+      {
+        "type": "text",
+        "text": "FALL DETECTION  /  EXPERIMENTAL PROTOTYPE",
+        "x": 90,
+        "y": 1018,
+        "w": 1500,
+        "h": 24.6,
+        "size": 20,
+        "color": "52675F",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "text",
+        "text": "05 / 10",
+        "x": 1700,
+        "y": 1018,
+        "w": 160,
+        "h": 24.6,
+        "size": 20,
+        "color": "52675F",
+        "font": "DM Sans",
+        "bold": false
+      }
+    ],
+    "notes": "This entire live vision pipeline remains pending. A is evaluating the punpayut Fall-Detection Transformer checkpoint as a TFLite model with LiteRT. Before live decisions, establish training/runtime preprocessing, tensor shapes, landmark order, coordinates, normalization, cadence, sequence length, and output class meaning. A correctly shaped inference call proves compatibility only, not accuracy. Missing pose remains unknown and must not trigger an emergency by itself."
+  },
+  {
+    "name": "06 / Deterministic safety logic",
+    "background": "142522",
+    "elements": [
+      {
+        "type": "text",
+        "text": "05  /  SAFETY ENGINEERING",
+        "x": 96,
+        "y": 82,
+        "w": 1500,
+        "h": 31.98,
+        "size": 26,
+        "color": "B8F3D2",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "text",
+        "text": "One incident. One countdown.",
+        "x": 90,
+        "y": 185,
+        "w": 1730,
+        "h": 118.08,
+        "size": 96,
+        "color": "F5F2E9",
+        "font": "Space Grotesk",
+        "bold": true
+      },
+      {
+        "type": "text",
+        "text": "IMPLEMENTED / TESTED WITH SIMULATED EVIDENCE",
+        "x": 98,
+        "y": 330,
+        "w": 1680,
+        "h": 34.44,
+        "size": 28,
+        "color": "B8F3D2",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "stack",
+        "x": 96,
+        "y": 485,
+        "w": 390,
+        "h": 260,
+        "children": [
+          {
+            "type": "text",
+            "text": "01",
+            "x": 30,
+            "y": 30,
+            "w": 330,
+            "h": 34.44,
+            "size": 28,
+            "color": "B8F3D2",
+            "font": "DM Sans",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Monitoring",
+            "x": 30,
+            "y": 30,
+            "w": 330,
+            "h": 118,
+            "size": 43,
+            "color": "F5F2E9",
+            "font": "Space Grotesk",
+            "bold": true
+          }
+        ],
+        "gap": 24,
+        "padding": 30,
+        "color": "213A34"
+      },
+      {
+        "type": "line",
+        "x": 491,
+        "y": 615,
+        "x2": 536,
+        "y2": 615,
+        "color": "B8F3D2",
+        "thickness": 4
+      },
+      {
+        "type": "stack",
+        "x": 546,
+        "y": 485,
+        "w": 390,
+        "h": 260,
+        "children": [
+          {
+            "type": "text",
+            "text": "02",
+            "x": 30,
+            "y": 30,
+            "w": 330,
+            "h": 34.44,
+            "size": 28,
+            "color": "B8F3D2",
+            "font": "DM Sans",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Suspected fall",
+            "x": 30,
+            "y": 30,
+            "w": 330,
+            "h": 118,
+            "size": 43,
+            "color": "F5F2E9",
+            "font": "Space Grotesk",
+            "bold": true
+          }
+        ],
+        "gap": 24,
+        "padding": 30,
+        "color": "213A34"
+      },
+      {
+        "type": "line",
+        "x": 941,
+        "y": 615,
+        "x2": 986,
+        "y2": 615,
+        "color": "B8F3D2",
+        "thickness": 4
+      },
+      {
+        "type": "stack",
+        "x": 996,
+        "y": 485,
+        "w": 390,
+        "h": 260,
+        "children": [
+          {
+            "type": "text",
+            "text": "03",
+            "x": 30,
+            "y": 30,
+            "w": 330,
+            "h": 34.44,
+            "size": 28,
+            "color": "B8F3D2",
+            "font": "DM Sans",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Awaiting response",
+            "x": 30,
+            "y": 30,
+            "w": 330,
+            "h": 118,
+            "size": 43,
+            "color": "F5F2E9",
+            "font": "Space Grotesk",
+            "bold": true
+          }
+        ],
+        "gap": 24,
+        "padding": 30,
+        "color": "213A34"
+      },
+      {
+        "type": "line",
+        "x": 1391,
+        "y": 615,
+        "x2": 1436,
+        "y2": 615,
+        "color": "B8F3D2",
+        "thickness": 4
+      },
+      {
+        "type": "stack",
+        "x": 1446,
+        "y": 485,
+        "w": 390,
+        "h": 260,
+        "children": [
+          {
+            "type": "text",
+            "text": "04",
+            "x": 30,
+            "y": 30,
+            "w": 330,
+            "h": 34.44,
+            "size": 28,
+            "color": "B8F3D2",
+            "font": "DM Sans",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Alerting",
+            "x": 30,
+            "y": 30,
+            "w": 330,
+            "h": 118,
+            "size": 43,
+            "color": "F5F2E9",
+            "font": "Space Grotesk",
+            "bold": true
+          }
+        ],
+        "gap": 24,
+        "padding": 30,
+        "color": "213A34"
+      },
+      {
+        "type": "stack",
+        "x": 98,
+        "y": 810,
+        "w": 785,
+        "h": 101.64,
+        "children": [
+          {
+            "type": "text",
+            "text": "Repeated detections do not restart time.",
+            "x": 0,
+            "y": 0,
+            "w": 785,
+            "h": 44.28,
+            "size": 36,
+            "color": "F5F2E9",
+            "font": "DM Sans",
+            "bold": false
+          },
+          {
+            "type": "text",
+            "text": "Cancellation or delivery requires explicit reset.",
+            "x": 0,
+            "y": 0,
+            "w": 785,
+            "h": 39.36,
+            "size": 32,
+            "color": "DCE8E1",
+            "font": "DM Sans",
+            "bold": false
+          }
+        ],
+        "gap": 18,
+        "padding": 0,
+        "color": null
+      },
+      {
+        "type": "stack",
+        "x": 1040,
+        "y": 810,
+        "w": 760,
+        "h": 101.64,
+        "children": [
+          {
+            "type": "text",
+            "text": "Camera loss does not cancel an incident.",
+            "x": 0,
+            "y": 0,
+            "w": 760,
+            "h": 44.28,
+            "size": 36,
+            "color": "F5F2E9",
+            "font": "DM Sans",
+            "bold": false
+          },
+          {
+            "type": "text",
+            "text": "Network requests never block the countdown.",
+            "x": 0,
+            "y": 0,
+            "w": 760,
+            "h": 39.36,
+            "size": 32,
+            "color": "DCE8E1",
+            "font": "DM Sans",
+            "bold": false
+          }
+        ],
+        "gap": 18,
+        "padding": 0,
+        "color": null
+      },
+      {
+        "type": "text",
+        "text": "FALL DETECTION  /  EXPERIMENTAL PROTOTYPE",
+        "x": 90,
+        "y": 1018,
+        "w": 1500,
+        "h": 24.6,
+        "size": 20,
+        "color": "DCE8E1",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "text",
+        "text": "06 / 10",
+        "x": 1700,
+        "y": 1018,
+        "w": 160,
+        "h": 24.6,
+        "size": 20,
+        "color": "DCE8E1",
+        "font": "DM Sans",
+        "bold": false
+      }
+    ],
+    "notes": "A supplies detection evidence; B owns incidents and alert decisions. Countdown timing uses a monotonic clock. Tests cover cancellation immediately before expiry, exact-deadline behavior, repeated detections, reset barriers, camera/worker failure, and stalled transport. After cancellation or delivery, the operator must explicitly reset. No automatic notification retry occurs. Delivery acceptance is not caregiver acknowledgement."
+  },
+  {
+    "name": "07 / Simulated demo",
+    "background": "B8F3D2",
+    "elements": [
+      {
+        "type": "text",
+        "text": "06  /  DEMO",
+        "x": 96,
+        "y": 82,
+        "w": 1400,
+        "h": 31.98,
+        "size": 26,
+        "color": "182D27",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "text",
+        "text": "SIMULATED INPUT · INTERACTION SCHEMATIC",
+        "x": 96,
+        "y": 145,
+        "w": 1400,
+        "h": 30.75,
+        "size": 25,
+        "color": "52675F",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "stack",
+        "x": 100,
+        "y": 330,
+        "w": 960,
+        "h": 417.61,
+        "children": [
+          {
+            "type": "text",
+            "text": "Are you okay?",
+            "x": 0,
+            "y": 0,
+            "w": 960,
+            "h": 115.62,
+            "size": 94,
+            "color": "182D27",
+            "font": "Space Grotesk",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "20 s",
+            "x": 0,
+            "y": 0,
+            "w": 960,
+            "h": 218.94,
+            "size": 178,
+            "color": "182D27",
+            "font": "Space Grotesk",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Response window",
+            "x": 0,
+            "y": 0,
+            "w": 960,
+            "h": 43.05,
+            "size": 35,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": false
+          }
+        ],
+        "gap": 20,
+        "padding": 0,
+        "color": null
+      },
+      {
+        "type": "stack",
+        "x": 100,
+        "y": 800,
+        "w": 740,
+        "h": 120,
+        "children": [
+          {
+            "type": "text",
+            "text": "I’m okay / Cancel",
+            "x": 30,
+            "y": 30,
+            "w": 680,
+            "h": 54.12,
+            "size": 44,
+            "color": "F5F2E9",
+            "font": "Space Grotesk",
+            "bold": true
+          }
+        ],
+        "gap": 20,
+        "padding": 30,
+        "color": "142522"
+      },
+      {
+        "type": "stack",
+        "x": 1210,
+        "y": 355,
+        "w": 605,
+        "h": 551.28,
+        "children": [
+          {
+            "type": "text",
+            "text": "01  Press F",
+            "x": 0,
+            "y": 0,
+            "w": 605,
+            "h": 56.58,
+            "size": 46,
+            "color": "182D27",
+            "font": "Space Grotesk",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Inject a simulated possible fall.",
+            "x": 0,
+            "y": 0,
+            "w": 605,
+            "h": 92,
+            "size": 34,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": false
+          },
+          {
+            "type": "text",
+            "text": "02  Press C",
+            "x": 0,
+            "y": 0,
+            "w": 605,
+            "h": 56.58,
+            "size": 46,
+            "color": "182D27",
+            "font": "Space Grotesk",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Cancel before countdown expiry.",
+            "x": 0,
+            "y": 0,
+            "w": 605,
+            "h": 92,
+            "size": 34,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": false
+          },
+          {
+            "type": "text",
+            "text": "03  Reset, then repeat",
+            "x": 0,
+            "y": 0,
+            "w": 605,
+            "h": 54.12,
+            "size": 44,
+            "color": "182D27",
+            "font": "Space Grotesk",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Let time expire; inspect simulated delivery.",
+            "x": 0,
+            "y": 0,
+            "w": 605,
+            "h": 100,
+            "size": 34,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": false
+          }
+        ],
+        "gap": 20,
+        "padding": 0,
+        "color": null
+      },
+      {
+        "type": "line",
+        "x": 1115,
+        "y": 335,
+        "x2": 1115,
+        "y2": 915,
+        "color": "52675F",
+        "thickness": 3
+      },
+      {
+        "type": "text",
+        "text": "FALL DETECTION  /  EXPERIMENTAL PROTOTYPE",
+        "x": 90,
+        "y": 1018,
+        "w": 1500,
+        "h": 24.6,
+        "size": 20,
+        "color": "52675F",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "text",
+        "text": "07 / 10",
+        "x": 1700,
+        "y": 1018,
+        "w": 160,
+        "h": 24.6,
+        "size": 20,
+        "color": "52675F",
+        "font": "DM Sans",
+        "bold": false
+      }
+    ],
+    "notes": "Before presenting, run: .venv/bin/fall-detection --detector fake --ui --scenario idle. Press F to start the simulated incident. Press C or the cancellation button before expiry. Press R to rearm, then F again and allow the countdown to expire. The displayed outcome is simulated; this demonstration never sends a real message. There is no prerecorded prompt yet, so the app shows an audio error while the countdown continues. This slide is an interaction schematic, not an actual application screenshot."
+  },
+  {
+    "name": "08 / Evidence and limits",
+    "background": "F5F2E9",
+    "elements": [
+      {
+        "type": "text",
+        "text": "07  /  EVIDENCE SO FAR",
+        "x": 96,
+        "y": 82,
+        "w": 1400,
+        "h": 31.98,
+        "size": 26,
+        "color": "52675F",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "text",
+        "text": "43",
+        "x": 82,
+        "y": 210,
+        "w": 780,
+        "h": 420,
+        "size": 340,
+        "color": "182D27",
+        "font": "Space Grotesk",
+        "bold": true
+      },
+      {
+        "type": "stack",
+        "x": 105,
+        "y": 660,
+        "w": 770,
+        "h": 180.52,
+        "children": [
+          {
+            "type": "text",
+            "text": "automated tests passing",
+            "x": 0,
+            "y": 0,
+            "w": 770,
+            "h": 59.04,
+            "size": 48,
+            "color": "182D27",
+            "font": "Space Grotesk",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Application behavior.\nNot detection accuracy.",
+            "x": 0,
+            "y": 0,
+            "w": 770,
+            "h": 93.48,
+            "size": 38,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": false
+          }
+        ],
+        "gap": 28,
+        "padding": 0,
+        "color": null
+      },
+      {
+        "type": "stack",
+        "x": 1010,
+        "y": 260,
+        "w": 780,
+        "h": 217.02,
+        "children": [
+          {
+            "type": "text",
+            "text": "01",
+            "x": 0,
+            "y": 0,
+            "w": 780,
+            "h": 31.98,
+            "size": 26,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Timing boundaries",
+            "x": 0,
+            "y": 0,
+            "w": 780,
+            "h": 59.04,
+            "size": 48,
+            "color": "182D27",
+            "font": "Space Grotesk",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Cancellation, expiry, deduplication, rearming.",
+            "x": 0,
+            "y": 0,
+            "w": 780,
+            "h": 98,
+            "size": 34,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": false
+          }
+        ],
+        "gap": 14,
+        "padding": 0,
+        "color": null
+      },
+      {
+        "type": "stack",
+        "x": 1010,
+        "y": 475,
+        "w": 780,
+        "h": 217.02,
+        "children": [
+          {
+            "type": "text",
+            "text": "02",
+            "x": 0,
+            "y": 0,
+            "w": 780,
+            "h": 31.98,
+            "size": 26,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Fault handling",
+            "x": 0,
+            "y": 0,
+            "w": 780,
+            "h": 59.04,
+            "size": 48,
+            "color": "182D27",
+            "font": "Space Grotesk",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Camera loss, missing pose, worker failures.",
+            "x": 0,
+            "y": 0,
+            "w": 780,
+            "h": 98,
+            "size": 34,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": false
+          }
+        ],
+        "gap": 14,
+        "padding": 0,
+        "color": null
+      },
+      {
+        "type": "stack",
+        "x": 1010,
+        "y": 690,
+        "w": 780,
+        "h": 217.02,
+        "children": [
+          {
+            "type": "text",
+            "text": "03",
+            "x": 0,
+            "y": 0,
+            "w": 780,
+            "h": 31.98,
+            "size": 26,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Transport isolation",
+            "x": 0,
+            "y": 0,
+            "w": 780,
+            "h": 59.04,
+            "size": 48,
+            "color": "182D27",
+            "font": "Space Grotesk",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Timeouts, uncertain delivery, simulation guard.",
+            "x": 0,
+            "y": 0,
+            "w": 780,
+            "h": 98,
+            "size": 34,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": false
+          }
+        ],
+        "gap": 14,
+        "padding": 0,
+        "color": null
+      },
+      {
+        "type": "text",
+        "text": "Source: prototype test suite at application commit 1d72e63",
+        "x": 105,
+        "y": 950,
+        "w": 1680,
+        "h": 29.52,
+        "size": 24,
+        "color": "52675F",
+        "font": "DM Sans",
+        "bold": false
+      },
+      {
+        "type": "text",
+        "text": "FALL DETECTION  /  EXPERIMENTAL PROTOTYPE",
+        "x": 90,
+        "y": 1018,
+        "w": 1500,
+        "h": 24.6,
+        "size": 20,
+        "color": "52675F",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "text",
+        "text": "08 / 10",
+        "x": 1700,
+        "y": 1018,
+        "w": 160,
+        "h": 24.6,
+        "size": 20,
+        "color": "52675F",
+        "font": "DM Sans",
+        "bold": false
+      }
+    ],
+    "notes": "All 43 tests passed with optional UI/audio dependencies installed. In a fresh environment with no third-party packages, 41 passed and two optional decoding/rendering tests skipped. An actual OpenCV window completed a simulated countdown and simulated delivery. No real speaker playback, camera/model operation, or Telegram destination was tested. Do not translate this test count into a detection accuracy claim."
+  },
+  {
+    "name": "09 / Planned evaluation",
+    "background": "F5F2E9",
+    "elements": [
+      {
+        "type": "text",
+        "text": "08  /  THE NEXT EXPERIMENT",
+        "x": 96,
+        "y": 82,
+        "w": 1500,
+        "h": 31.98,
+        "size": 26,
+        "color": "52675F",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "text",
+        "text": "Test the detector.\nThen test the whole system.",
+        "x": 90,
+        "y": 180,
+        "w": 1740,
+        "h": 236.16,
+        "size": 96,
+        "color": "182D27",
+        "font": "Space Grotesk",
+        "bold": true
+      },
+      {
+        "type": "rect",
+        "x": 96,
+        "y": 500,
+        "w": 500,
+        "h": 12,
+        "color": "DD916D",
+        "radius": 0
+      },
+      {
+        "type": "stack",
+        "x": 96,
+        "y": 535,
+        "w": 500,
+        "h": 205.74,
+        "children": [
+          {
+            "type": "text",
+            "text": "01",
+            "x": 0,
+            "y": 0,
+            "w": 500,
+            "h": 36.9,
+            "size": 30,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Verify inputs",
+            "x": 0,
+            "y": 0,
+            "w": 500,
+            "h": 54.12,
+            "size": 44,
+            "color": "182D27",
+            "font": "Space Grotesk",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Resolve checkpoint preprocessing\nand output class meaning.",
+            "x": 0,
+            "y": 0,
+            "w": 500,
+            "h": 78.72,
+            "size": 32,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": false
+          }
+        ],
+        "gap": 18,
+        "padding": 0,
+        "color": null
+      },
+      {
+        "type": "rect",
+        "x": 690,
+        "y": 590,
+        "w": 500,
+        "h": 12,
+        "color": "DD916D",
+        "radius": 0
+      },
+      {
+        "type": "stack",
+        "x": 690,
+        "y": 625,
+        "w": 500,
+        "h": 205.74,
+        "children": [
+          {
+            "type": "text",
+            "text": "02",
+            "x": 0,
+            "y": 0,
+            "w": 500,
+            "h": 36.9,
+            "size": 30,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Evaluate clips",
+            "x": 0,
+            "y": 0,
+            "w": 500,
+            "h": 54.12,
+            "size": 44,
+            "color": "182D27",
+            "font": "Space Grotesk",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Falls, sitting, bending,\nintentional lying down.",
+            "x": 0,
+            "y": 0,
+            "w": 500,
+            "h": 78.72,
+            "size": 32,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": false
+          }
+        ],
+        "gap": 18,
+        "padding": 0,
+        "color": null
+      },
+      {
+        "type": "rect",
+        "x": 1280,
+        "y": 680,
+        "w": 500,
+        "h": 12,
+        "color": "DD916D",
+        "radius": 0
+      },
+      {
+        "type": "stack",
+        "x": 1280,
+        "y": 715,
+        "w": 500,
+        "h": 205.74,
+        "children": [
+          {
+            "type": "text",
+            "text": "03",
+            "x": 0,
+            "y": 0,
+            "w": 500,
+            "h": 36.9,
+            "size": 30,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Verify hardware",
+            "x": 0,
+            "y": 0,
+            "w": 500,
+            "h": 54.12,
+            "size": 44,
+            "color": "182D27",
+            "font": "Space Grotesk",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Webcam, recorded prompt,\nTelegram and internet failure.",
+            "x": 0,
+            "y": 0,
+            "w": 500,
+            "h": 78.72,
+            "size": 32,
+            "color": "52675F",
+            "font": "DM Sans",
+            "bold": false
+          }
+        ],
+        "gap": 18,
+        "padding": 0,
+        "color": null
+      },
+      {
+        "type": "text",
+        "text": "Record: detected falls · missed falls · false alerts · alert delay",
+        "x": 98,
+        "y": 940,
+        "w": 1720,
+        "h": 41.82,
+        "size": 34,
+        "color": "182D27",
+        "font": "DM Sans",
+        "bold": false
+      },
+      {
+        "type": "text",
+        "text": "FALL DETECTION  /  EXPERIMENTAL PROTOTYPE",
+        "x": 90,
+        "y": 1018,
+        "w": 1500,
+        "h": 24.6,
+        "size": 20,
+        "color": "52675F",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "text",
+        "text": "09 / 10",
+        "x": 1700,
+        "y": 1018,
+        "w": 160,
+        "h": 24.6,
+        "size": 20,
+        "color": "52675F",
+        "font": "DM Sans",
+        "bold": false
+      }
+    ],
+    "notes": "These are planned experiments; no detection measurements are available yet. Use appropriately licensed existing fall clips and representative non-fall activities; do not stage dangerous falls or record monitored webcam footage. Track observed detections, misses, false alerts, and delay. Evaluate camera failure and offline delivery explicitly. A small evaluation cannot establish validated accuracy. Real prompt audio and a Telegram test bot/chat are still needed."
+  },
+  {
+    "name": "10 / Closing",
+    "background": "142522",
+    "elements": [
+      {
+        "type": "text",
+        "text": "09  /  WHAT WE ARE BUILDING",
+        "x": 96,
+        "y": 82,
+        "w": 1500,
+        "h": 31.98,
+        "size": 26,
+        "color": "B8F3D2",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "text",
+        "text": "Privacy by design.\nVerification by evidence.",
+        "x": 90,
+        "y": 220,
+        "w": 1750,
+        "h": 275.52,
+        "size": 112,
+        "color": "F5F2E9",
+        "font": "Space Grotesk",
+        "bold": true
+      },
+      {
+        "type": "stack",
+        "x": 105,
+        "y": 615,
+        "w": 790,
+        "h": 154.84,
+        "children": [
+          {
+            "type": "text",
+            "text": "BUILT",
+            "x": 0,
+            "y": 0,
+            "w": 790,
+            "h": 34.44,
+            "size": 28,
+            "color": "B8F3D2",
+            "font": "DM Sans",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Safety workflow + local controls\nAudio and notification workers",
+            "x": 0,
+            "y": 0,
+            "w": 790,
+            "h": 98.4,
+            "size": 40,
+            "color": "F5F2E9",
+            "font": "DM Sans",
+            "bold": false
+          }
+        ],
+        "gap": 22,
+        "padding": 0,
+        "color": null
+      },
+      {
+        "type": "stack",
+        "x": 1050,
+        "y": 615,
+        "w": 750,
+        "h": 154.84,
+        "children": [
+          {
+            "type": "text",
+            "text": "NEXT",
+            "x": 0,
+            "y": 0,
+            "w": 750,
+            "h": 34.44,
+            "size": 28,
+            "color": "B8F3D2",
+            "font": "DM Sans",
+            "bold": true
+          },
+          {
+            "type": "text",
+            "text": "Live detection + model evaluation\nRecorded prompt + Telegram setup",
+            "x": 0,
+            "y": 0,
+            "w": 750,
+            "h": 98.4,
+            "size": 40,
+            "color": "F5F2E9",
+            "font": "DM Sans",
+            "bold": false
+          }
+        ],
+        "gap": 22,
+        "padding": 0,
+        "color": null
+      },
+      {
+        "type": "text",
+        "text": "Experimental prototype. Not a sole emergency response system.",
+        "x": 105,
+        "y": 870,
+        "w": 1700,
+        "h": 41.82,
+        "size": 34,
+        "color": "DCE8E1",
+        "font": "DM Sans",
+        "bold": false
+      },
+      {
+        "type": "text",
+        "text": "Questions?",
+        "x": 105,
+        "y": 935,
+        "w": 1600,
+        "h": 46.74,
+        "size": 38,
+        "color": "B8F3D2",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "text",
+        "text": "FALL DETECTION  /  EXPERIMENTAL PROTOTYPE",
+        "x": 90,
+        "y": 1018,
+        "w": 1500,
+        "h": 24.6,
+        "size": 20,
+        "color": "DCE8E1",
+        "font": "DM Sans",
+        "bold": true
+      },
+      {
+        "type": "text",
+        "text": "10 / 10",
+        "x": 1700,
+        "y": 1018,
+        "w": 160,
+        "h": 24.6,
+        "size": 20,
+        "color": "DCE8E1",
+        "font": "DM Sans",
+        "bold": false
+      }
+    ],
+    "notes": "Close with the central contribution: a privacy-first architecture paired with an explicit, testable incident workflow. The application layer is implemented; live detection and real-device verification remain. This is a laptop/desktop prototype, not a medically validated system or a substitute for emergency care. Raspberry Pi deployment is out of scope. Invite questions about the preprocessing gate, cancellation policy, and evaluation design."
+  }
+]
