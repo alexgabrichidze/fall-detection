@@ -1,6 +1,7 @@
 """Local application integration. Fake mode never uses real notifications."""
 
 import argparse
+from collections import deque
 from collections.abc import Callable
 from math import isfinite
 from pathlib import Path
@@ -8,6 +9,7 @@ import sys
 from time import monotonic, sleep
 
 from .audio import PROMPTS, PromptPlayer
+from .clips import FallClipBuffer
 from .config import ApplicationConfig, ScaffoldConfig
 from .contracts import CameraStatus, Detector, DetectionSource, EventKind, PoseStatus, Preview
 from .detection import create_live_detector
@@ -15,11 +17,19 @@ from .detection_config import DEFAULT_MODEL
 from .device import Command, ConsoleRenderer, OpenCVDevice, View, begin_camera_access, request_camera_access
 from .fake_detector import FakeDetector
 from .notifier import (
-    DeliveryStatus, FakeSender, NotificationWorker, TelegramSender,
+    CaregiverAction, CaregiverReply, DeliveryStatus, FakeSender, NotificationWorker, TelegramSender,
 )
 from .safety import EffectKind, SafetyController, SafetyState
 from .voice import DEFAULT_VOICE_MODEL, VoiceListener
-from .telegram_link import create_telegram_link, telegram_config
+from .telegram_link import TelegramLink, telegram_config
+
+
+DELIVERY_PROMPTS = {
+    DeliveryStatus.ACCEPTED: "caregiver-notified.wav",
+    DeliveryStatus.FAILED: "caregiver-alert-not-sent.wav",
+    DeliveryStatus.SIMULATED: "caregiver-alert-not-sent.wav",
+    DeliveryStatus.UNCERTAIN: "caregiver-alert-uncertain.wav",
+}
 
 
 def consume_pending(detector: Detector, renderer: ConsoleRenderer) -> int:
@@ -42,7 +52,8 @@ class Application:
     """
 
     def __init__(self, detector: Detector, notifier, audio, *, config=ApplicationConfig(),
-                 clock: Callable[[], float] = monotonic, event_sink=None, voice=None):
+                 clock: Callable[[], float] = monotonic, event_sink=None, voice=None,
+                 clips_enabled: Callable[[], bool] | None = None):
         self.detector = detector
         self.notifier = notifier
         self.audio = audio
@@ -54,7 +65,11 @@ class Application:
         self.paused = False
         self.detector_error = None
         self.audio_status = "not requested"
-        self._pending_prompt: Path | None = None
+        self._clips = FallClipBuffer() if clips_enabled else None
+        self._clips_enabled = clips_enabled
+        self._pending_prompts: deque[tuple[str, Path | None]] = deque()
+        self._audio_incident: str | None = None
+        self._caregiver: CaregiverAction | None = None
         self.quit = False
         self._event_sink = event_sink
         self._preview = Preview(clock(), detector.source, CameraStatus.STOPPED)
@@ -82,6 +97,38 @@ class Application:
             self.paused = False
             self.detector_error = None
 
+    def _stop_response(self):
+        self.audio.cancel()
+        self._pending_prompts.clear()
+        if self.voice:
+            self.voice.cancel()
+
+    def _cancel_incident(self):
+        if self.safety.cancel():
+            self._stop_response()
+            if self._clips:
+                self._clips.discard()
+            self._pending_prompts.append((self.safety.incident.incident_id, PROMPTS / "alarm-cancelled.wav"))
+
+    def _rearm(self):
+        if not self.safety.reset():
+            return
+        self._stop_response()
+        self.notifier.watch(None)
+        self._caregiver = None
+        self._audio_incident = None
+        self.audio_status = "not requested"
+        if self._clips:
+            self._clips.discard()
+            self._clips.clear_recent()
+        if self.running:
+            try:
+                self.detector.set_paused(True)
+                if not self.paused:
+                    self.detector.set_paused(False)
+            except Exception:
+                self.detector_error = "detector rearm failed"
+
     def step(self, commands: tuple[Command, ...] = ()) -> View:
         for command in commands:
             if command == Command.QUIT:
@@ -89,27 +136,9 @@ class Application:
             elif command == Command.STOP:
                 self.stop()
             elif command == Command.CANCEL:
-                if self.safety.cancel():
-                    self.audio.cancel()
-                    self._pending_prompt = None
-                    if self.voice:
-                        self.voice.cancel()
+                self._cancel_incident()
             elif command == Command.RESET:
-                if self.safety.reset():
-                    self.audio.cancel()
-                    self._pending_prompt = None
-                    if self.voice:
-                        self.voice.cancel()
-                    self.audio_status = "not requested"
-                    # Discard the detector's pre-reset movement history too.
-                    # Already queued events are rejected by the reset timestamp.
-                    if self.running:
-                        try:
-                            self.detector.set_paused(True)
-                            if not self.paused:
-                                self.detector.set_paused(False)
-                        except Exception:
-                            self.detector_error = "detector rearm failed"
+                self._rearm()
             elif command == Command.PAUSE and self.running:
                 try:
                     self.detector.set_paused(not self.paused)
@@ -125,6 +154,7 @@ class Application:
                 except RuntimeError:
                     # The fake correctly refuses fall injection while paused/faulted.
                     pass
+        clips_enabled = self._clips_enabled() if self._clips_enabled else False
         try:
             # Events remain independent from the replaceable preview snapshot.
             for _ in range(32 if self.running else 0):
@@ -138,8 +168,12 @@ class Application:
                     self._event_sink(event)
                 if event.kind == EventKind.FAULT:
                     self.detector_error = event.fault_code.value
-                else:
-                    self.safety.observe(event)
+                elif self.safety.observe(event):
+                    if self._caregiver is not None:
+                        self._stop_response()
+                        self._caregiver = None
+                    if self._clips and clips_enabled:
+                        self._clips.mark(event.timestamp)
             preview = self.detector.latest_preview()
             if preview.source != self.detector.source:
                 self.detector_error = "preview source mismatch"
@@ -147,47 +181,67 @@ class Application:
                 self._preview = preview
         except Exception:
             self.detector_error = "detector worker unavailable"
+        if self._clips:
+            if clips_enabled and self.running and not self.paused and not self.detector_error and self._preview.frame:
+                self._clips.observe(self._preview.frame, self._preview.timestamp)
+            else:
+                self._clips.clear_recent()
+                if not clips_enabled:
+                    self._clips.discard()
         if self.voice:
             response = self.voice.poll()
             if (response and self.safety.incident
-                    and response.incident_id == self.safety.incident.incident_id
-                    and self.safety.cancel()):
-                self.audio.cancel()
-                self._pending_prompt = None
-                self.voice.cancel()
+                    and response.incident_id == self.safety.incident.incident_id):
+                self._cancel_incident()
         # Faults above never suppress the active incident's clock.
         for effect in self.safety.tick():
+            incident_id = effect.incident.incident_id
             if effect.kind == EffectKind.PROMPT:
-                self.audio_status = "playing"
-                if not self.audio.play(effect.incident.incident_id):
-                    self.audio_status = "error: audio worker unavailable"
+                self._pending_prompts.append((incident_id, None))
             elif effect.kind == EffectKind.REMINDER:
                 if self.voice:
                     self.voice.cancel()
-                self._pending_prompt = PROMPTS / "ten-seconds-left.wav"
+                self._pending_prompts.append((incident_id, PROMPTS / "ten-seconds-left.wav"))
             elif effect.kind == EffectKind.ALERT:
-                self.audio.cancel()
-                self._pending_prompt = None
-                if self.voice:
-                    self.voice.cancel()
-                if not self.notifier.submit(effect.incident):
-                    self.safety.delivery_result(effect.incident.incident_id, DeliveryStatus.FAILED.value)
+                self._stop_response()
+                frames = self._clips.take() if self._clips else ()
+                submitted = self.notifier.submit(effect.incident, frames) if frames else self.notifier.submit(effect.incident)
+                if not submitted:
+                    self.safety.delivery_result(incident_id, DeliveryStatus.FAILED.value)
+                    self._pending_prompts.append((incident_id, PROMPTS / DELIVERY_PROMPTS[DeliveryStatus.FAILED]))
         result = self.notifier.poll()
-        if result:
-            recorded = self.safety.delivery_result(result.incident_id, result.status.value)
-            if recorded and result.status == DeliveryStatus.ACCEPTED:
-                self._pending_prompt = PROMPTS / "caregiver-notified.wav"
+        if result and self.safety.delivery_result(result.incident_id, result.status.value):
+            self._pending_prompts.append((result.incident_id, PROMPTS / DELIVERY_PROMPTS[result.status]))
+            if result.status in (DeliveryStatus.ACCEPTED, DeliveryStatus.UNCERTAIN):
+                self.notifier.watch(result.incident_id)
+        reply = self.notifier.poll_reply()
+        if (isinstance(reply, CaregiverReply) and self.safety.state == SafetyState.ALERTING
+                and reply.incident_id == self.safety.incident.incident_id
+                and self.safety.delivery in (DeliveryStatus.ACCEPTED.value, DeliveryStatus.UNCERTAIN.value)):
+            if reply.action == CaregiverAction.FALSE_ALARM:
+                self._rearm()
+                prompt = "caregiver-false-alarm.wav"
+            else:
+                prompt = "caregiver-help-on-the-way.wav"
+            self._caregiver = reply.action
+            self._pending_prompts.append((reply.incident_id, PROMPTS / prompt))
         audio_result = self.audio.poll()
-        if audio_result and self.safety.incident and audio_result.incident_id == self.safety.incident.incident_id:
+        if audio_result and audio_result.incident_id == self._audio_incident:
             self.audio_status = audio_result.status
-            if (self.voice and not self._pending_prompt and audio_result.status == "played"
+            if (self.voice and not self._pending_prompts and audio_result.status == "played"
+                    and self.safety.incident and audio_result.incident_id == self.safety.incident.incident_id
                     and self.safety.state == SafetyState.AWAITING_RESPONSE):
                 self.voice.start(audio_result.incident_id, self.safety.incident.deadline)
         # Speaker cues wait until the microphone worker has released input.
-        if (self._pending_prompt and (not self.voice or self.voice.idle)
-                and self.audio.play(self.safety.incident.incident_id, self._pending_prompt)):
-            self._pending_prompt = None
-            self.audio_status = "playing"
+        if self._pending_prompts and (not self.voice or self.voice.idle):
+            incident_id, path = self._pending_prompts[0]
+            playing = self.audio.play(incident_id, path) if path else self.audio.play(incident_id)
+            if playing:
+                self._pending_prompts.popleft()
+                self._audio_incident = incident_id
+                self.audio_status = "playing"
+            elif self.audio_status != "playing":
+                self.audio_status = "error: audio worker unavailable"
         return self.view()
 
     def view(self) -> View:
@@ -206,7 +260,7 @@ class Application:
         return View(self._preview, self.safety.state, self.safety.remaining(), self.safety.delivery,
                     self.audio_status, self.paused, error,
                     self.safety.incident.incident_id if self.safety.incident else None, self.running,
-                    voice_status, listening)
+                    voice_status, listening, self._caregiver)
 
     def close(self) -> tuple[str, ...]:
         errors = []
@@ -285,18 +339,26 @@ def main(argv: list[str] | None = None) -> int:
         else:
             timing = ScaffoldConfig(duration if duration is not None else max(1.0, args.event_after + 1), args.event_after)
             detector = FakeDetector()
-        telegram = create_telegram_link() if args.web and live else None
+        telegram = TelegramLink() if args.web and live else None
+        receive = None
+        clips_enabled = None
         if telegram:
             sender = telegram.notify
+            receive = telegram.poll_reply
+            clips_enabled = lambda: telegram.status()["linked"]
         elif args.telegram:
-            sender = TelegramSender(telegram_config())
+            sender = TelegramSender(telegram_config(), replies=True)
+            receive = sender.poll_reply
+            clips_enabled = lambda: True
         else:
             sender = FakeSender(DeliveryStatus(args.notification_outcome))
     except ValueError as error:
         parser.error(str(error))
     prompt = args.prompt
     if prompt is None and (live or args.web):
-        prompt = PROMPTS / ("fall-warning-20.wav" if args.countdown == 20 else "fall-warning.wav")
+        voice_suffix = "-voice" if args.voice else ""
+        time_suffix = "-20" if args.countdown == 20 else ""
+        prompt = PROMPTS / f"fall-warning{voice_suffix}{time_suffix}.wav"
     renderer = None
     app = None
     try:
@@ -323,7 +385,7 @@ def main(argv: list[str] | None = None) -> int:
             except OSError:
                 print(f"Could not open port {args.port}. Choose another port with --port.", file=sys.stderr)
                 return 2
-            print(f"Open Fall Monitor at {renderer.url}", flush=True)
+            print(f"Open Safe&Sound at {renderer.url}", flush=True)
         else:
             try:
                 renderer = OpenCVDevice(telegram_enabled=args.telegram) if use_ui else ConsoleRenderer(sys.stdout)
@@ -336,9 +398,10 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 print("SIMULATION ONLY: no camera, AI inference, microphone, or real notifications.", flush=True)
             print("Local prompt audio enabled." if prompt else "Audio prompt missing; countdown and cancellation remain available.", flush=True)
-        app = Application(detector, NotificationWorker(sender), PromptPlayer(prompt), config=config,
+        app = Application(detector, NotificationWorker(sender, receive), PromptPlayer(prompt), config=config,
                           event_sink=renderer.event if isinstance(renderer, ConsoleRenderer) else None,
-                          voice=VoiceListener(args.voice_model, args.microphone) if args.voice else None)
+                          voice=VoiceListener(args.voice_model, args.microphone) if args.voice else None,
+                          clips_enabled=clips_enabled)
         if not (args.web and live):
             app.start()
         # Map the window before polling visibility or keyboard/mouse events.

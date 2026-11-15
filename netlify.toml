@@ -1,0 +1,10 @@
+[build]
+  command = "npm ci --prefix web && npm run --prefix web build"
+  publish = "web/dist"
+
+[build.environment]
+  NODE_VERSION = "24"
+
+[functions]
+  directory = "web/functions"
+  node_bundler = "esbuild"

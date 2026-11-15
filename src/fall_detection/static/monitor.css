@@ -97,7 +97,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   color: #f7faf8;
   --icon-background: var(--stage);
 }
-.stage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.stage img, .stage video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .stage-message { max-width: 85%; display: grid; justify-items: center; text-align: center; gap: 8px; padding-block: 14px; }
 .stage-message .camera-icon { font-size: clamp(2.65rem, 5vw, 4.3rem); margin-bottom: 12px; }
 .stage-message strong { font-size: clamp(1.27rem, 2.3vw, 1.8rem); letter-spacing: -.035em; }
@@ -362,3 +362,9 @@ details code { display: block; margin-top: 6px; padding: 7px 9px; overflow-wrap:
   .activity-scores li { padding: 8px 0; }
   .activity-card progress { height: 5px; }
 }
+
+/* Shared desktop/PWA controls retain the compact, square monitor layout. */
+.camera-start { border: 0; background: transparent; color: inherit; cursor: pointer; font: inherit; }
+.camera-start:disabled { cursor: default; }
+.camera-options { display: grid; gap: 10px; }
+.camera-options .button { justify-content: flex-start; text-align: left; }

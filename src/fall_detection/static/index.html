@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Fall Monitor</title>
+  <title>Safe&amp;Sound</title>
   <link rel="stylesheet" href="/monitor.css">
   <script src="/monitor.js" defer></script>
 </head>
 <body>
-  <main class="shell" aria-label="Fall Monitor">
+  <main class="shell" aria-label="Safe&amp;Sound">
     <p id="notice" class="notice" role="status" hidden></p>
 
     <div id="dashboard" class="dashboard">
@@ -24,6 +24,7 @@
         </div>
           <div class="camera-toolbar">
             <span id="camera-chip" class="chip" data-tone="neutral">Off</span>
+            <button id="voice-toggle" class="button outline" type="button" hidden>Enable voice</button>
             <div class="camera-actions">
         <button id="stop-camera" class="button outline" type="button" hidden>Stop camera</button>
         <button id="camera-action" class="button primary" type="button" disabled>
@@ -35,11 +36,11 @@
         <div class="video-space" id="video-space">
         <div class="stage" id="stage">
           <img id="preview" alt="Local camera preview with pose landmarks" hidden>
-          <div id="camera-placeholder" class="stage-message">
+          <button id="camera-placeholder" class="stage-message camera-start" type="button" aria-describedby="camera-detail">
             <i class="camera-icon" aria-hidden="true"></i>
             <strong id="camera-message">Camera is off</strong>
             <span id="camera-detail">Start the camera to begin monitoring.</span>
-          </div>
+          </button>
           <div class="frame-guides" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
         </div>
         </div>
@@ -86,7 +87,7 @@
             <h2 id="telegram-title"><i class="plane-icon" aria-hidden="true"></i>Telegram alerts</h2>
             <span id="telegram-chip" class="chip" data-tone="neutral">Not linked</span>
           </div>
-          <p id="telegram-description">Link one chat to receive alerts when the countdown expires.</p>
+          <p id="telegram-description">Link one chat to receive fall alerts with a short camera clip.</p>
           <button id="open-link" class="button outline full-width" type="button" disabled>Connect Telegram</button>
           <div id="telegram-actions" class="telegram-actions" hidden>
             <button id="send-test" class="button outline" type="button">Send test message</button>
@@ -100,6 +101,14 @@
     </div>
 
   </main>
+
+  <dialog id="camera-dialog" aria-labelledby="camera-dialog-title">
+    <div class="dialog-heading">
+      <h2 id="camera-dialog-title">Choose a camera</h2>
+      <button id="close-camera-dialog" class="icon-button" type="button" aria-label="Cancel camera selection">×</button>
+    </div>
+    <div id="camera-options" class="camera-options"></div>
+  </dialog>
 
   <dialog id="link-dialog" aria-labelledby="link-title">
     <div class="dialog-heading">
