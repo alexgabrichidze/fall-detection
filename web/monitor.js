@@ -1,0 +1,294 @@
+import { PromptAudio } from './audio.js';
+import { RollingRecordings } from './recording.js';
+import { Telegram } from './telegram.js';
+
+const COUNTDOWN = 20000;
+const ACCEPTED = 'telegram_accepted_no_acknowledgement';
+const MIN_FRAME_INTERVAL = 28;
+const DELIVERY_PROMPTS = {
+  [ACCEPTED]: 'caregiver-notified',
+  failed: 'caregiver-alert-not-sent',
+  simulated_accepted: 'caregiver-alert-not-sent',
+  uncertain: 'caregiver-alert-uncertain',
+};
+
+export class BrowserMonitor {
+  telegram = new Telegram();
+  audio = new PromptAudio();
+  recordings = new RollingRecordings();
+  cameraInput = 0;
+  cameras = [{ index: 0, name: 'Front or default camera' }, { index: 1, name: 'Rear camera' }];
+  view = {
+    live: true, browser: true, countdown: 20, running: false, permissionPending: false,
+    camera: 'stopped', pose: 'unknown', modelReady: false, hasFrame: false,
+    paused: false, fault: null, incident: 'monitoring', delivery: 'none', caregiver: null,
+  };
+
+  constructor(video) {
+    this.video = video;
+    setInterval(() => this.tick(), 100);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && this.stream) {
+        this.detector?.reset();
+        this.keepAwake();
+      }
+    });
+  }
+
+  async request(path, body) {
+    if (path === '/api/status') {
+      return { ...this.view, cameraInput: this.cameraInput, telegram: this.telegram.status,
+        audio: this.audio.status, voice: this.voice?.status || 'Disabled',
+        listening: this.voice?.listening || false,
+        remaining: this.view.incident === 'awaiting_response' ? Math.max(0, this.deadline - Date.now()) / 1000 : null };
+    }
+    if (path === '/api/cameras') {
+      const devices = await navigator.mediaDevices?.enumerateDevices().catch(() => []) || [];
+      this.cameras = [
+        { index: 0, name: 'Front or default camera' }, { index: 1, name: 'Rear camera' },
+        ...devices.filter(device => device.kind === 'videoinput' && device.label)
+          .map((device, index) => ({ index: index + 2, name: device.label, id: device.deviceId })),
+      ];
+      if (!this.cameras.some(camera => camera.index === this.cameraInput)) this.cameraInput = 0;
+      return { cameras: this.cameras, selected: this.cameraInput };
+    }
+    if (path === '/api/camera') {
+      if (!this.stream && this.cameras.some(camera => camera.index === body.index)) this.cameraInput = body.index;
+      return {};
+    }
+    if (path.startsWith('/api/telegram/')) {
+      const result = await this.telegram.action(path.split('/').at(-1));
+      this.syncRecording();
+      return result;
+    }
+    if (path === '/api/command') {
+      if (body.command === 'start') await this.start();
+      if (body.command === 'stop') this.stop();
+      if (body.command === 'pause') this.pause();
+      if (body.command === 'cancel') this.cancel();
+      if (body.command === 'reset') this.reset();
+      return {};
+    }
+    throw new Error('Unknown monitor action.');
+  }
+
+  async toggleVoice() {
+    if (this.voiceBusy) return this.voice?.enabled || false;
+    this.voiceBusy = true;
+    try {
+      if (this.voice?.enabled) {
+        this.voice.stop();
+        this.voice.enabled = false;
+        this.voice.status = 'Disabled';
+      } else {
+        await this.audio.unlock();
+        const { Voice } = await import('./voice.js');
+        this.voice ??= new Voice();
+        await this.voice.enable(this.audio.context);
+      }
+      return this.voice.enabled;
+    } finally {
+      this.voiceBusy = false;
+    }
+  }
+
+  async start() {
+    this.stop();
+    this.view.fault = null;
+    this.view.permissionPending = true;
+    this.view.camera = 'starting';
+    this.audio.unlock();
+    let stream;
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error('Open this site in a browser with HTTPS camera access.');
+      const device = this.cameras.find(camera => camera.index === this.cameraInput);
+      const source = device?.id ? { deviceId: { exact: device.id } }
+        : { facingMode: { ideal: this.cameraInput === 1 ? 'environment' : 'user' } };
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { ...source, width: { ideal: 640, max: 960 }, height: { ideal: 480, max: 960 }, frameRate: { ideal: 30 } },
+        audio: false,
+      });
+      this.stream = stream;
+      this.video.srcObject = stream;
+      await this.video.play();
+    } catch (error) {
+      this.stop();
+      this.view.fault = error.name === 'NotAllowedError' ? 'camera_permission_denied' : 'browser_camera_unavailable';
+      throw new Error(this.view.fault === 'camera_permission_denied' ? 'Allow this site to use the camera, then retry.' : 'Could not start this camera.');
+    } finally {
+      this.view.permissionPending = false;
+    }
+    this.view.running = true;
+    this.view.hasFrame = true;
+    stream.getVideoTracks()[0].addEventListener('ended', () => {
+      if (this.stream !== stream) return;
+      this.stop();
+      this.view.fault = 'browser_camera_unavailable';
+    });
+    this.keepAwake();
+    this.syncRecording();
+    try {
+      this.detector ??= await import('./detector.js').then(module => module.loadDetector());
+      if (this.stream !== stream) return;
+      this.detector.reset();
+      this.view.camera = 'available';
+      this.runCamera(stream);
+    } catch {
+      this.stop();
+      this.view.fault = 'browser_model_unavailable';
+    }
+  }
+
+  runCamera(stream) {
+    let lastFrame = -Infinity;
+    const schedule = this.video.requestVideoFrameCallback
+      ? callback => this.video.requestVideoFrameCallback(callback)
+      : callback => requestAnimationFrame(callback);
+    const frame = async time => {
+      if (this.stream !== stream) return;
+      if (!this.view.paused && !document.hidden && time - lastFrame >= MIN_FRAME_INTERVAL && this.video.readyState >= 2) {
+        lastFrame = time;
+        try {
+          const result = await this.detector.sample(this.video, time);
+          if (this.stream !== stream) return;
+          this.view.pose = result.status;
+          this.view.modelReady = result.score !== null;
+          if (result.fall && !this.view.paused && this.view.incident === 'monitoring') this.fall();
+        } catch {
+          this.stop();
+          this.view.fault = 'browser_model_unavailable';
+          return;
+        }
+      }
+      if (this.stream === stream) schedule(frame);
+    };
+    schedule(frame);
+  }
+
+  stop() {
+    this.recordings.stop();
+    if (this.stream) this.stream.getTracks().forEach(track => track.stop());
+    this.stream = this.video.srcObject = null;
+    this.wakeLock?.release().catch(() => {});
+    this.wakeLock = null;
+    Object.assign(this.view, { running: false, paused: false, hasFrame: false, camera: 'stopped',
+      pose: 'unknown', modelReady: false });
+  }
+
+  async keepAwake() {
+    try {
+      if (!this.wakeLock || this.wakeLock.released) {
+        const stream = this.stream;
+        const lock = await navigator.wakeLock?.request('screen');
+        if (this.stream !== stream) await lock?.release();
+        else this.wakeLock = lock;
+      }
+    } catch {
+      // Some installed browsers do not support the screen wake lock.
+    }
+  }
+
+  pause() {
+    if (!this.stream || !this.detector) return;
+    this.view.paused = !this.view.paused;
+    this.view.hasFrame = !this.view.paused;
+    this.detector.reset();
+    this.syncRecording();
+  }
+
+  syncRecording() {
+    if (this.stream && this.telegram.status.linked && !this.view.paused) {
+      this.recordings.start(this.stream);
+    } else {
+      if (!this.telegram.status.linked) this.recordings.discard();
+      this.recordings.stop();
+    }
+  }
+
+  fall() {
+    this.id = crypto.randomUUID();
+    this.deadline = Date.now() + COUNTDOWN;
+    this.reminded = false;
+    this.view.caregiver = null;
+    this.view.incident = 'awaiting_response';
+    this.recordings.mark();
+    this.prompt(this.voice?.enabled ? 'fall-warning-voice-20' : 'fall-warning-20', this.id);
+  }
+
+  async prompt(name, incident) {
+    this.voice?.stop();
+    const played = await this.audio.play(name);
+    if (played && this.id === incident && this.view.incident === 'awaiting_response' && Date.now() < this.deadline) {
+      this.voice?.listen(() => this.cancel());
+    }
+  }
+
+  cancel() {
+    if (this.view.incident !== 'awaiting_response' || Date.now() >= this.deadline) return;
+    this.voice?.stop();
+    this.recordings.discard();
+    this.view.incident = 'cancelled';
+    this.audio.play('alarm-cancelled');
+  }
+
+  reset() {
+    if (this.view.incident !== 'cancelled'
+        && (this.view.incident !== 'alerting' || this.view.delivery === 'pending')) return;
+    this.id = null;
+    this.voice?.stop();
+    this.audio.cancel();
+    this.audio.status = 'not requested';
+    this.detector?.reset();
+    this.recordings.discard();
+    Object.assign(this.view, { incident: 'monitoring', delivery: 'none', caregiver: null });
+  }
+
+  async sendAlert(id) {
+    this.view.incident = 'alerting';
+    this.view.delivery = 'pending';
+    this.audio.cancel();
+    this.voice?.stop();
+    const delivery = await this.telegram.alert(id, await this.recordings.take());
+    if (this.id !== id) return;
+    this.view.delivery = delivery;
+    if (DELIVERY_PROMPTS[delivery]) this.audio.play(DELIVERY_PROMPTS[delivery]);
+    this.watchUntil = Date.now() + 30 * 60 * 1000;
+    this.nextReply = Date.now();
+  }
+
+  tick() {
+    const now = Date.now();
+    if (this.view.incident === 'awaiting_response') {
+      if (now >= this.deadline) this.sendAlert(this.id);
+      else if (!this.reminded && now >= this.deadline - 10000) {
+        this.reminded = true;
+        this.prompt('ten-seconds-left', this.id);
+      }
+    } else if (this.view.incident === 'alerting' && !this.view.caregiver
+        && [ACCEPTED, 'uncertain'].includes(this.view.delivery) && now >= this.nextReply
+        && now < this.watchUntil && !this.replyPending) {
+      this.checkReply(this.id);
+    }
+  }
+
+  async checkReply(id) {
+    this.replyPending = true;
+    this.nextReply = Date.now() + 2000;
+    try {
+      const reply = await this.telegram.reply(id);
+      if (this.id !== id) return;
+      if (reply === 'false_alarm') {
+        this.reset();
+        this.view.caregiver = reply;
+        this.audio.play('caregiver-false-alarm');
+      } else if (reply === 'help') {
+        this.view.caregiver = reply;
+        this.audio.play('caregiver-help-on-the-way');
+      }
+    } catch {
+      // Polling resumes once the connection is available again.
+    } finally {
+      this.replyPending = false;
+    }
+  }
+}
